@@ -16,10 +16,10 @@ describe('gridSize', () => {
 });
 
 describe('pictureToLevel', () => {
-  test("'auto' colours match 4 colours and add a background", () => {
+  test("'auto' colours grow up to 10 and add a background", () => {
     const { background, ...auto } = pictureToLevel(square, { cols: 10, colors: 'auto', invert: false });
-    const { background: _, ...four } = pictureToLevel(square, { cols: 10, colors: 4, invert: false });
-    expect(auto).toEqual(four);
+    const { background: _, ...ten } = pictureToLevel(square, { cols: 10, colors: 10, invert: false });
+    expect(auto).toEqual(ten);
     expect(background).toBe('light');
   });
 
@@ -183,6 +183,21 @@ describe('auto colours', () => {
     );
     expect(pictureToLevel(blocks, { cols: 50, ...auto }).palette).toHaveLength(10);
     expect(pictureToLevel(blocks, { cols: 50, colors: 3, invert: false }).palette).toHaveLength(3);
+  });
+
+  test('an outlier spot does not use up one of the ten colour slots', () => {
+    const colours: Rgba[] = [
+      [220, 30, 30, 255], [30, 160, 40, 255], [30, 40, 220, 255], [200, 200, 0, 255],
+      [200, 0, 200, 255], [0, 160, 160, 255], [240, 130, 0, 255], [110, 40, 150, 255],
+      [0, 0, 0, 255], [110, 110, 110, 255], [120, 70, 30, 255], [0, 30, 90, 255],
+    ];
+    // A 2×2 px bright green spot (one cell) inside the black block.
+    const blocks = paint(100, 80, (x, y) =>
+      inBox(x, y, 20, 60, 21, 61) ? [0, 255, 0, 255]
+        : x < 10 || x >= 90 || y < 10 || y >= 70 ? WHITE
+          : colours[Math.floor((y - 10) / 20) * 4 + Math.floor((x - 10) / 20)],
+    );
+    expect(pictureToLevel(blocks, { cols: 50, ...auto }).palette).toHaveLength(10);
   });
 
   test('dark colours get a light board and pale colours a dark one', () => {

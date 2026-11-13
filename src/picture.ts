@@ -9,6 +9,8 @@ const MAX_COLORS = 10;
 const AUTO_MIN_DE = 12;
 /** A small group survives when it is at least this far (ΔE) from its nearest group. */
 const DETAIL_DE = 25;
+/** Clustering passes; a pass after the first only runs when outlier seeds were merged away. */
+const MAX_PASSES = 4;
 const OPAQUE = 128;
 const TRANSPARENT_SHARE = 0.01;
 const MIN_CONTRAST = 16;
@@ -120,45 +122,60 @@ const hex = (rgb: Rgb) => '#' + rgb.map((v) => Math.round(v).toString(16).padSta
 /**
  * k-means in Lab over shape-cell colours, seeded by farthest-point picks so it needs
  * no RNG. Seeding stops at `k` groups or when the farthest colour is within
- * AUTO_MIN_DE of every group. Groups that don't survive merge into their nearest.
+ * AUTO_MIN_DE of every group. Groups that don't survive merge into their nearest; when
+ * that frees a slot, another pass reseeds without those outlier colours.
  * Returns a group index per colour and each group's mean RGB, largest group first.
  */
 function quantize(colours: Rgb[], k: number): { labels: number[]; centres: Rgb[] } {
   const labs = colours.map(toLab);
   const meanOf = (vs: Rgb[]) => [0, 1, 2].map((ch) => vs.reduce((s, v) => s + v[ch], 0) / vs.length) as Rgb;
-  let centres: Rgb[] = [labs[0]];
-  while (centres.length < k) {
-    let far = labs[0];
-    let farD = -1;
-    for (const c of labs) {
-      const d = Math.min(...centres.map((m) => dist2(c, m)));
-      if (d > farD) [far, farD] = [c, d];
-    }
-    if (farD < AUTO_MIN_DE ** 2) break;
-    centres.push(far);
-  }
-  const nearest = (c: Rgb) => centres.reduce((bi, m, i) => (dist2(c, m) < dist2(c, centres[bi]) ? i : bi), 0);
-  let labels: number[] = [];
-  for (let round = 0; round < KMEANS_ROUNDS; round++) {
-    labels = labs.map(nearest);
-    centres = centres.map((m, i) => {
-      const members = labs.filter((_, j) => labels[j] === i);
-      return members.length ? meanOf(members) : m;
-    });
-  }
-  // A group survives when it is big enough, or small but clearly distinct (a detail
-  // like eyes or glasses). Others merge into their nearest group, smallest first.
   const minSize = Math.max(2, MIN_GROUP_SHARE * colours.length);
-  for (;;) {
-    const sizes = centres.map((_, i) => labels.filter((l) => l === i).length);
-    const live = sizes.flatMap((n, i) => (n > 0 ? [i] : []));
-    const nearestOther = (i: number) => live.filter((o) => o !== i).reduce((bi, o) => (dist2(centres[i], centres[o]) < dist2(centres[i], centres[bi]) ? o : bi));
-    const survives = (i: number) => sizes[i] >= minSize || (sizes[i] >= 2 && dist2(centres[i], centres[nearestOther(i)]) >= DETAIL_DE ** 2);
-    const doomed = live.filter((i) => !survives(i)).sort((a, b) => sizes[a] - sizes[b] || a - b)[0];
-    if (live.length < 2 || doomed === undefined) break;
-    const into = nearestOther(doomed);
-    labels = labels.map((l) => (l === doomed ? into : l));
-    centres[into] = meanOf(labs.filter((_, j) => labels[j] === into));
+  // Seeds whose group was merged away; a later pass doesn't try them again.
+  const skipped = new Set<number>();
+  let labels: number[] = [];
+  let centres: Rgb[] = [];
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    const seeds = [0];
+    while (seeds.length < k) {
+      let far = -1;
+      let farD = -1;
+      labs.forEach((c, j) => {
+        if (skipped.has(j)) return;
+        const d = Math.min(...seeds.map((m) => dist2(c, labs[m])));
+        if (d > farD) [far, farD] = [j, d];
+      });
+      if (far < 0 || farD < AUTO_MIN_DE ** 2) break;
+      seeds.push(far);
+    }
+    centres = seeds.map((j) => labs[j]);
+    const nearest = (c: Rgb) => centres.reduce((bi, m, i) => (dist2(c, m) < dist2(c, centres[bi]) ? i : bi), 0);
+    for (let round = 0; round < KMEANS_ROUNDS; round++) {
+      labels = labs.map(nearest);
+      centres = centres.map((m, i) => {
+        const members = labs.filter((_, j) => labels[j] === i);
+        return members.length ? meanOf(members) : m;
+      });
+    }
+    // A group survives when it is big enough, or small but clearly distinct (a detail
+    // like eyes or glasses). Others merge into their nearest group, smallest first.
+    const doomedSeeds: number[] = [];
+    for (;;) {
+      const sizes = centres.map((_, i) => labels.filter((l) => l === i).length);
+      const live = sizes.flatMap((n, i) => (n > 0 ? [i] : []));
+      const nearestOther = (i: number) =>
+        live.filter((o) => o !== i).reduce((bi, o) => (dist2(centres[i], centres[o]) < dist2(centres[i], centres[bi]) ? o : bi));
+      const survives = (i: number) => sizes[i] >= minSize || (sizes[i] >= 2 && dist2(centres[i], centres[nearestOther(i)]) >= DETAIL_DE ** 2);
+      const doomed = live.filter((i) => !survives(i)).sort((a, b) => sizes[a] - sizes[b] || a - b)[0];
+      if (live.length < 2 || doomed === undefined) break;
+      doomedSeeds.push(seeds[doomed]);
+      const into = nearestOther(doomed);
+      labels = labels.map((l) => (l === doomed ? into : l));
+      centres[into] = meanOf(labs.filter((_, j) => labels[j] === into));
+    }
+    // Slots freed by merged-away outliers go to the next candidates on another pass.
+    const freed = doomedSeeds.filter((j) => j !== 0 && !skipped.has(j));
+    if (!freed.length || seeds.length < k) break;
+    for (const j of freed) skipped.add(j);
   }
   const order = centres
     .map((_, i) => ({ i, n: labels.filter((l) => l === i).length }))

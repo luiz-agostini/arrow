@@ -71,7 +71,11 @@ export function pictureToLevel(
 - [x] palette entries are mean RGB of each group's cells
 - [x] background by minimum contrast (the test where minimum and mean disagree failed under the stand-in)
 - [x] full tests (202) and build pass
-- [ ] review
+- [ ] review. Round 1 found three issues, each fixed test-first:
+  - high: `blendOf` ran on transparent pictures (bg came from invisible pixels' RGB); bg is now only used without transparency
+  - medium: `blendOf` swallowed real tints and drop shadows; a blend now requires the cell to contain background-coloured pixels
+  - medium: outlier seeds used up slots; when a seed's group is merged away, clustering reruns without it (up to 4 passes)
+  - low: the stale "'auto' matches 4" test now compares 'auto' with `colors: 10`
 - Real photos at 40 columns: 9–10 colours each, under 25 ms each; the white dog gets a dark board.
 
 ## Result

@@ -1,6 +1,6 @@
 # 04-editor: Editor for high-resolution, Auto-colour pictures
 
-Status: ready
+Status: in-progress
 Depends on: 00-contracts
 Size: S
 
@@ -54,5 +54,13 @@ Markup: `select[data-role="colors"]` options `auto,1,…,10` (default `auto`); `
 - The existing tests use a fake `decodeImage` passed through `startApp(root, deps)`; keep that pattern.
 
 ## Implementation notes
+- [x] tests first: slider 12–64 default 40 everywhere, colour options auto/1–10, copy, serializeLevel, clipboard failure, background reaches Play, one regeneration per frame (9 failed before the change)
+- [x] implement in `editor.ts`: options labelled 'Auto' and 1–10; 'Copy as level' button; the playable level carries `background`; input re-renders throttled with `requestAnimationFrame`
+- [x] full tests (247) and build
+- [ ] review
+
+Interpretations:
+- **Throttling:** slider, colour and invert inputs schedule one regeneration on the next animation frame. Opening the editor and Shuffle still render at once.
+- **Intended changes to existing tests:** the 1–6 options become auto/1–10; the default size 20 becomes 40; the phone-cap test is replaced (the cap is removed on purpose); after Play, arrows carry `--arrow-c`, because the level now has a background.
 
 ## Result

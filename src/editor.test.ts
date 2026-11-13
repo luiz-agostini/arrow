@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { serializeLevel } from './editor';
+import { generate } from './generate';
 import { startApp } from './main';
-import type { Pixels } from './picture';
+import { pictureToLevel, type Pixels } from './picture';
+
+// Count board generations to check that preview updates are throttled to one per frame.
+vi.mock('./generate', async (original) => {
+  const real = await original<typeof import('./generate')>();
+  return { ...real, generate: vi.fn(real.generate) };
+});
 import { BLUE, paint, RED, WHITE } from './test-helpers';
 
 const inBox = (x: number, y: number, x0: number, y0: number, x1: number, y1: number) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
@@ -12,6 +20,7 @@ const $ = <T extends Element = HTMLElement>(sel: string) => root.querySelector<T
 const editor = () => $('[data-role="editor"]');
 const click = (sel: string) => $(sel).dispatchEvent(new MouseEvent('click', { bubbles: true }));
 const flush = () => new Promise((r) => setTimeout(r, 0));
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(undefined)));
 const previewArrows = () =>
   [...editor().querySelectorAll('g.arrow path.body')].map((p) => p.getAttribute('d')).join('|');
 
@@ -23,11 +32,12 @@ async function pickPicture(pixels: Pixels) {
   await flush();
 }
 
-function setInput(sel: string, value: string | boolean) {
+async function setInput(sel: string, value: string | boolean) {
   const el = $<HTMLInputElement>(sel);
   if (typeof value === 'boolean') el.checked = value;
   else el.value = value;
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  await nextFrame();
 }
 
 beforeEach(() => {
@@ -55,14 +65,14 @@ test('picking a picture shows a coloured preview with coverage', async () => {
 
 test('grid size, invert and shuffle regenerate the preview', async () => {
   await pickPicture(twoTone);
-  expect($<HTMLInputElement>('[data-role="grid-size"]').value).toBe('20');
-  setInput('[data-role="grid-size"]', '12');
+  expect($<HTMLInputElement>('[data-role="grid-size"]').value).toBe('40');
+  await setInput('[data-role="grid-size"]', '12');
   expect(editor().querySelector('svg')!.getAttribute('viewBox')).toBe('-24 -24 336 336');
   const before = previewArrows();
   click('[data-action="shuffle"]');
   expect(previewArrows()).not.toBe(before);
   const shuffled = previewArrows();
-  setInput('[data-role="invert"]', true);
+  await setInput('[data-role="invert"]', true);
   expect(previewArrows()).not.toBe(shuffled);
 });
 
@@ -71,9 +81,9 @@ test('changing the number of colours changes the palette', async () => {
   const colours = () => new Set([...editor().querySelectorAll<SVGGElement>('g.arrow')].map((g) => g.style.getPropertyValue('--arrow-c')));
   expect(colours().size).toBe(2);
   const select = $<HTMLSelectElement>('[data-role="colors"]');
-  expect([...select.options].map((o) => o.value)).toEqual(['1', '2', '3', '4', '5', '6']);
-  select.value = '1';
-  select.dispatchEvent(new Event('input', { bubbles: true }));
+  expect([...select.options].map((o) => o.value)).toEqual(['auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
+  expect(select.value).toBe('auto');
+  await setInput('[data-role="colors"]', '1');
   expect(colours().size).toBe(1);
 });
 
@@ -82,7 +92,9 @@ test('play starts the picture level without touching progress', async () => {
   click('[data-action="play"]');
   expect(editor().hidden).toBe(true);
   expect($('[data-role="level"]').textContent).toBe('Your picture');
-  expect($('main svg g.arrow').getAttribute('style')).toContain('--arrow-light');
+  expect($('main svg g.arrow').getAttribute('style')).toContain('--arrow-c');
+  const expected = pictureToLevel(twoTone, { cols: 40, colors: 'auto', invert: false }).background;
+  expect($<SVGSVGElement>('main svg.board').dataset.bg).toBe(expected);
   expect($<HTMLButtonElement>('[data-action="next"]').disabled).toBe(true);
   expect(localStorage.getItem('arrow.progress')).toBeNull();
   expect(localStorage.getItem('arrow.cleared')).toBeNull();
@@ -104,12 +116,53 @@ test('a picture without a shape cannot be played', async () => {
   expect($('[data-role="editor-status"]').textContent).toBe('No shape found — try Invert');
 });
 
-test('grid size is capped at 24 on phones', async () => {
-  Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true });
+test.each([400, 1024])('grid size runs from 12 to 64, default 40, at %i px wide', async (width) => {
+  Object.defineProperty(window, 'innerWidth', { value: width, configurable: true });
   await pickPicture(twoTone);
   const slider = $<HTMLInputElement>('[data-role="grid-size"]');
-  expect(slider.max).toBe('24');
-  expect(slider.min).toBe('12');
+  expect([slider.min, slider.max, slider.value]).toEqual(['12', '64', '40']);
+});
+
+test('rapid input regenerates the preview once per frame', async () => {
+  await pickPicture(twoTone);
+  vi.mocked(generate).mockClear();
+  const slider = $<HTMLInputElement>('[data-role="grid-size"]');
+  for (const v of ['30', '31', '32', '33', '34']) {
+    slider.value = v;
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  expect(generate).not.toHaveBeenCalled();
+  await nextFrame();
+  expect(generate).toHaveBeenCalledTimes(1);
+  expect(editor().querySelector('svg')!.getAttribute('viewBox')).toBe('-24 -24 864 864');
+});
+
+test('copy as level writes the level source to the clipboard', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  await pickPicture(twoTone);
+  click('[data-action="copy-level"]');
+  await flush();
+  expect(writeText).toHaveBeenCalledTimes(1);
+  const text = writeText.mock.calls[0][0] as string;
+  expect(text).toContain("name: 'Your picture'");
+  expect(text).toContain("background: '");
+  expect(text).toContain('mask: [');
+});
+
+test('a rejected clipboard shows a message', async () => {
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('denied')) }, configurable: true });
+  await pickPicture(twoTone);
+  click('[data-action="copy-level"]');
+  await flush();
+  expect($('[data-role="editor-status"]').textContent).toBe("Couldn't copy the level");
+});
+
+test('serializeLevel writes a levels.ts entry, escaping quotes and omitting absent fields', () => {
+  expect(serializeLevel({ name: "Bob's", mask: ['0.'], seed: 3 })).toBe("{\n    name: 'Bob\\'s',\n    seed: 3,\n    mask: [\n      '0.',\n    ],\n  },");
+  expect(serializeLevel({ name: 'P', mask: ['01'], seed: 9, palette: ['#ff0000', '#0000ff'], background: 'dark' })).toBe(
+    "{\n    name: 'P',\n    seed: 9,\n    palette: ['#ff0000', '#0000ff'],\n    background: 'dark',\n    mask: [\n      '01',\n    ],\n  },",
+  );
 });
 
 test('a picture that cannot be decoded shows a message', async () => {

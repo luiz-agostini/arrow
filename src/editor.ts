@@ -4,12 +4,10 @@ import { pictureToLevel, type Pixels } from './picture';
 import { mountBoard } from './render';
 
 export const MIN_COLS = 12;
-export const DEFAULT_COLS = 20;
-export const MAX_COLS = 40;
-export const PHONE_MAX_COLS = 24;
-export const PHONE_WIDTH = 600;
-export const DEFAULT_COLORS = 4;
+export const DEFAULT_COLS = 40;
+export const MAX_COLS = 64;
 export const MIN_CELLS = 20;
+const COLOR_CHOICES = ['auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 const MAX_DECODE = 512;
 
 /** Decodes a picked file to pixels, longest side at most 512 px; orientation comes from the file. */
@@ -29,22 +27,22 @@ export async function decodeImage(file: File): Promise<Pixels> {
 
 /** Shows the picture editor in `host`; Play hands the finished level to `onPlay`. */
 export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Level) => void): void {
-  const maxCols = window.innerWidth < PHONE_WIDTH ? PHONE_MAX_COLS : MAX_COLS;
   host.innerHTML = `
     <div class="editor-panel">
       <h2>Your picture</h2>
       <svg class="board preview" role="img" aria-label="level preview"></svg>
       <p class="editor-status" data-role="editor-status" aria-live="polite"></p>
       <div class="editor-controls">
-        <label>Size <input type="range" data-role="grid-size" min="${MIN_COLS}" max="${maxCols}" value="${DEFAULT_COLS}" /></label>
-        <label>Colours <select data-role="colors">${[1, 2, 3, 4, 5, 6]
-          .map((n) => `<option value="${n}"${n === DEFAULT_COLORS ? ' selected' : ''}>${n}</option>`)
-          .join('')}</select></label>
+        <label>Size <input type="range" data-role="grid-size" min="${MIN_COLS}" max="${MAX_COLS}" value="${DEFAULT_COLS}" /></label>
+        <label>Colours <select data-role="colors">${COLOR_CHOICES.map(
+          (c) => `<option value="${c}">${c === 'auto' ? 'Auto' : c}</option>`,
+        ).join('')}</select></label>
         <label><input type="checkbox" data-role="invert" /> Invert</label>
         <button type="button" data-action="shuffle">Shuffle</button>
       </div>
       <div class="editor-actions">
         <span data-role="coverage"></span>
+        <button type="button" data-action="copy-level">Copy as level</button>
         <button type="button" data-action="cancel">Cancel</button>
         <button type="button" data-action="play">Play</button>
       </div>
@@ -64,7 +62,7 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
   const render = () => {
     const { mask, palette, cells, background } = pictureToLevel(pixels, {
       cols: Number(size.value),
-      colors: Number(colors.value),
+      colors: colors.value === 'auto' ? 'auto' : Number(colors.value),
       invert: invert.checked,
     });
     if (cells < MIN_CELLS) {
@@ -75,7 +73,7 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
       play.disabled = true;
       return;
     }
-    level = { name: 'Your picture', mask, seed, palette };
+    level = { name: 'Your picture', mask, seed, palette, background };
     const board = generate(mask, seed);
     mountBoard(svg, board, () => {}, { palette, background });
     const covered = board.arrows.reduce((n, a) => n + a.cells.length, 0);
@@ -84,7 +82,16 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
     play.disabled = false;
   };
 
-  host.oninput = render;
+  // Dragging the slider fires many inputs; regenerate at most once per frame.
+  let scheduled = false;
+  host.oninput = () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      render();
+    });
+  };
   host.onclick = (e) => {
     const action = (e.target as Element).closest('[data-action]')?.getAttribute('data-action');
     if (action === 'shuffle') {
@@ -92,10 +99,32 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
       render();
     }
     if (action === 'cancel') host.hidden = true;
+    if (action === 'copy-level' && level) {
+      navigator.clipboard.writeText(serializeLevel(level)).catch(() => {
+        status.textContent = "Couldn't copy the level";
+      });
+    }
     if (action === 'play' && level) {
       host.hidden = true;
       onPlay(level);
     }
   };
   render();
+}
+
+const quote = (s: string) => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+
+/** A level as a `levels.ts` entry; `palette` and `background` lines appear only when set. */
+export function serializeLevel(level: Level): string {
+  return [
+    '{',
+    `    name: ${quote(level.name)},`,
+    `    seed: ${level.seed},`,
+    ...(level.palette ? [`    palette: [${level.palette.map(quote).join(', ')}],`] : []),
+    ...(level.background ? [`    background: ${quote(level.background)},`] : []),
+    '    mask: [',
+    ...level.mask.map((row) => `      ${quote(row)},`),
+    '    ],',
+    '  },',
+  ].join('\n');
 }

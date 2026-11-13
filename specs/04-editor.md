@@ -1,6 +1,6 @@
 # 04-editor: Editor for high-resolution, Auto-colour pictures
 
-Status: in-progress
+Status: done
 Depends on: 00-contracts
 Size: S
 
@@ -57,7 +57,7 @@ Markup: `select[data-role="colors"]` options `auto,1,…,10` (default `auto`); `
 - [x] tests first: slider 12–64 default 40 everywhere, colour options auto/1–10, copy, serializeLevel, clipboard failure, background reaches Play, one regeneration per frame (9 failed before the change)
 - [x] implement in `editor.ts`: options labelled 'Auto' and 1–10; 'Copy as level' button; the playable level carries `background`; input re-renders throttled with `requestAnimationFrame`
 - [x] full tests (245) and build
-- [ ] review. Round 1 fixes, each test-first:
+- [x] review: APPROVE after one fix round. Round 1 fixes, each test-first:
   - medium: a missing `navigator.clipboard` (insecure origin, older browsers) shows "Couldn't copy the level" instead of throwing
   - low: Play and Copy first run any pending throttled render, so they use the current controls
   - low: a successful copy clears an earlier copy error
@@ -68,3 +68,12 @@ Interpretations:
 - **Intended changes to existing tests:** the 1–6 options become auto/1–10; the default size 20 becomes 40; the phone-cap test is replaced (the cap is removed on purpose); after Play, arrows carry `--arrow-c`, because the level now has a background.
 
 ## Result
+- **Size:** columns 12–64, default 40, on every device; the phone cap is removed.
+- **Colours:** Auto (the default) or 1–10.
+- **Play:** the played level carries `background`, so the game shows the picture's backdrop.
+- **Copy as level:** writes `serializeLevel(level)`, which matches the `levels.ts` entry format. A missing or rejected clipboard shows "Couldn't copy the level", and a later success clears it.
+- **Throttling:** preview regeneration runs at most once per frame; Play and Copy run any pending render first.
+- **Checks:** `npm test` 249 passed, `npm run build` passes. Reviewer verdict: APPROVE.
+- **Left for a device test:** Copy over the LAN dev server (http) on a phone.
+
+DONE

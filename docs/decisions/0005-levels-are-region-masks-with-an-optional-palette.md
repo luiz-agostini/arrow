@@ -1,6 +1,6 @@
 # 0005: Levels are region masks with an optional palette
 
-Status: accepted
+Status: superseded by 0006
 Date: 2026-11-13
 Supersedes: 0002
 Rule: A level is `{ name, mask: string[], seed, palette? }`, where mask characters are `.` (empty), `0`–`5` (region index into `palette`) or `#` (alias of `0`), and boards are always produced by `generate(mask, seed)` using only the seeded RNG, never stored or hand-placed.

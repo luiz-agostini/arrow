@@ -1,6 +1,6 @@
 # 99-integration: Zoom buttons and app wiring
 
-Status: in-progress
+Status: done
 Depends on: 00-contracts, 03-board
 Size: S
 
@@ -55,7 +55,7 @@ Consumes `BoardView.zoom(factor)` and `BoardView.fit()` from 03-board. Markup to
 - [x] markup and handlers in `main.ts` (they read `view` at click time)
 - [x] `.zoom-controls` CSS. It's outside this spec's files, but 03 never added it, so this spec adds it to `style.css` minimally: a column in the board's top-right, 36 px buttons.
 - [x] full tests (253), build, Chrome check at 390×844 (zoom in twice, then Fit restores; no errors)
-- [ ] review. Round 1:
+- [x] review: APPROVE after one round (the style.css sign-off is the user's). Round 1:
   - medium: `style.css` is on this spec's "Must not touch" list, but 03 never added `.zoom-controls`. This spec added it (plus `touch-action: manipulation` on the buttons). **Needs the user's sign-off.**
   - low, fixed: added "starts at fit" checks for Next and for Play from the editor (pins; all loads go through `mountBoard`)
   - low, recorded: a pinch whose first finger lands on a zoom button isn't seen by the board (render only tracks pointers that start on the svg), so lifting the other finger can tap. A proper fix belongs in render.ts (track pointers on the stage) as a follow-up. Added to the phone check.
@@ -64,3 +64,12 @@ Consumes `BoardView.zoom(factor)` and `BoardView.fit()` from 03-board. Markup to
 Interpretation: the dark-background check uses the editor's Play with a pale-yellow-on-black picture, because no built-in level has a background until 98.
 
 ## Result
+- **Zoom controls:** `+`, `−` and `Fit` buttons (`.zoom-controls`) float at the board's top-right and act on the current board's `view`.
+- **Fit on load:** every load (pick, Next, Restart, editor Play) starts at fit, and a level's `background` reaches the board.
+- **Outside this spec's files:** `style.css` gained `.zoom-controls` (03 never added it) and `touch-action: manipulation` on those buttons. Needs the user's sign-off.
+- **Checks:** `npm test` 254 passed, `npm run build` passes. The zoom buttons work in Chrome at 390×844. Reviewer verdict: APPROVE.
+- **Left open:**
+  - The manual phone check, including a pinch starting on a zoom button and a quick double tap of +.
+  - A render.ts follow-up so a pinch whose first finger starts on a zoom button can't commit a tap.
+
+DONE_WITH_CONCERNS

@@ -1,4 +1,4 @@
-import { exitRay, STEP, type Arrow, type Board, type Cell, type Dir } from './model';
+import { exitRay, regionAt, STEP, type Arrow, type Board, type Cell, type Dir } from './model';
 import { mulberry32, shuffle } from './rng';
 
 export const MAX_LEN = 8;
@@ -12,7 +12,7 @@ function exterior(mask: string[], width: number, height: number): Set<string> {
   const queue: Cell[] = [];
   const visit = (c: Cell) => {
     if (c.x < 0 || c.y < 0 || c.x >= width || c.y >= height) return;
-    if (mask[c.y][c.x] === '#' || out.has(key(c))) return;
+    if (regionAt(mask, c) !== null || out.has(key(c))) return;
     out.add(key(c));
     queue.push(c);
   };
@@ -29,7 +29,7 @@ function depths(mask: string[], width: number, height: number): Map<string, numb
   const queue: Cell[] = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (mask[y][x] !== '#') continue;
+      if (regionAt(mask, { x, y }) === null) continue;
       const edge = DIRS.some((d) => {
         const n = { x: x + STEP[d].x, y: y + STEP[d].y };
         return n.x < 0 || n.y < 0 || n.x >= width || n.y >= height || outside.has(key(n));
@@ -44,7 +44,7 @@ function depths(mask: string[], width: number, height: number): Map<string, numb
     const c = queue[i];
     for (const d of DIRS) {
       const n = { x: c.x + STEP[d].x, y: c.y + STEP[d].y };
-      if (mask[n.y]?.[n.x] === '#' && !depth.has(key(n))) {
+      if (regionAt(mask, n) !== null && !depth.has(key(n))) {
         depth.set(key(n), depth.get(key(c))! + 1);
         queue.push(n);
       }
@@ -64,7 +64,7 @@ export function generate(mask: string[], seed: number): Board {
   const width = mask[0]?.length ?? 0;
   const size = { width, height };
   const depth = depths(mask, width, height);
-  const free = (c: Cell) => mask[c.y]?.[c.x] === '#' && !placed.has(key(c));
+  const free = (c: Cell) => regionAt(mask, c) !== null && !placed.has(key(c));
   const placed = new Set<string>();
   const arrows: Arrow[] = [];
 
@@ -76,20 +76,22 @@ export function generate(mask: string[], seed: number): Board {
     .sort((a, b) => depth.get(key(b))! - depth.get(key(a))!);
 
   // The deepest uncovered cell becomes the neck; the head sits one step past it.
-  // A length-1 arrow at the cell itself is the fallback.
+  // A length-1 arrow at the cell itself is the fallback. Bodies stay in c's region.
   for (const c of cells) {
     if (placed.has(key(c))) continue;
+    const region = regionAt(mask, c)!;
+    const freeHere = (x: Cell) => free(x) && regionAt(mask, x) === region;
     let best: Arrow | null = null;
     const candidates = [
       ...shuffle(DIRS, rand).map((dir) => ({ h: { x: c.x + STEP[dir].x, y: c.y + STEP[dir].y }, dir })),
       ...shuffle(DIRS, rand).map((dir) => ({ h: c, dir })),
     ];
     for (const { h, dir } of candidates) {
-      if (!free(h)) continue;
+      if (!freeHere(h)) continue;
       const ray = exitRay({ ...size, arrows: [] }, { id: 0, cells: [h], dir });
       if (ray.some((r) => placed.has(key(r)))) continue;
-      const body = growBody(h, dir, new Set(ray.map(key)), free, rand);
-      if (!best || body.length > best.cells.length) best = { id: arrows.length + 1, cells: body, dir };
+      const body = growBody(h, dir, new Set(ray.map(key)), freeHere, rand);
+      if (!best || body.length > best.cells.length) best = { id: arrows.length + 1, cells: body, dir, region };
       if (body.length >= 2) break;
     }
     if (!best) continue;
@@ -115,6 +117,7 @@ function absorbSingles(size: { width: number; height: number }, arrows: Arrow[])
       (a, j) =>
         j !== i &&
         !gone.has(j) &&
+        a.region === single.region &&
         a.cells.length < MAX_LEN &&
         Math.abs(a.cells[0].x - s.x) + Math.abs(a.cells[0].y - s.y) === 1 &&
         (a.cells.length > 1 || (a.cells[0].x - STEP[a.dir].x === s.x && a.cells[0].y - STEP[a.dir].y === s.y)) &&

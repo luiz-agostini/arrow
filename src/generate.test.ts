@@ -43,3 +43,18 @@ describe('generate', () => {
     expect(b.arrows[0].cells).toEqual([{ x: 1, y: 1 }]);
   });
 });
+
+describe('colour regions', () => {
+  const halves = Array.from({ length: 12 }, () => '000000111111');
+  const stripes = Array.from({ length: 12 }, (_, y) => String(y % 2).repeat(12));
+
+  test.each(Array.from({ length: 10 }, (_, i) => i + 1))('seed %i keeps arrows inside one of two halves', (seed) => {
+    expect(checkBoard(halves, generate(halves, seed)).coverage).toBeGreaterThanOrEqual(0.9);
+  });
+
+  test.each(Array.from({ length: 10 }, (_, i) => i + 1))('seed %i keeps one-cell-wide stripes apart', (seed) => {
+    const b = generate(stripes, seed);
+    checkBoard(stripes, b);
+    for (const a of b.arrows) expect(new Set(a.cells.map((c) => c.y)).size).toBe(1);
+  });
+});

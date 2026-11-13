@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import type { Board } from './model';
+import { regionAt, type Board } from './model';
 import { solve } from './solve';
 
 /** Asserts structural validity and solvability; returns the share of mask cells covered. */
@@ -10,7 +10,8 @@ export function checkBoard(mask: string[], b: Board): { coverage: number } {
       const key = `${c.x},${c.y}`;
       expect(seen.has(key), `cell ${key} used twice`).toBe(false);
       seen.add(key);
-      expect(mask[c.y]?.[c.x]).toBe('#');
+      expect(regionAt(mask, c), `cell ${key} outside the mask`).not.toBeNull();
+      expect(regionAt(mask, c), `cell ${key} outside region ${a.region}`).toBe(a.region);
       if (i > 0) {
         const p = a.cells[i - 1];
         expect(Math.abs(p.x - c.x) + Math.abs(p.y - c.y)).toBe(1);
@@ -23,6 +24,6 @@ export function checkBoard(mask: string[], b: Board): { coverage: number } {
     }
   }
   expect(solve(b)).not.toBeNull();
-  const total = mask.join('').split('').filter((ch) => ch === '#').length;
+  const total = mask.flatMap((row, y) => [...row].filter((_, x) => regionAt(mask, { x, y }) !== null)).length;
   return { coverage: seen.size / total };
 }

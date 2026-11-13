@@ -214,6 +214,27 @@ body {
   user-select: none;
 }
 
+/* Zoom buttons float in the board's top-right corner. */
+.zoom-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zoom-controls button {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
 .status {
   position: absolute;
   margin: 0;

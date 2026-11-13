@@ -1,6 +1,6 @@
 # 99-integration: Zoom buttons and app wiring
 
-Status: ready
+Status: in-progress
 Depends on: 00-contracts, 03-board
 Size: S
 
@@ -51,5 +51,12 @@ Consumes `BoardView.zoom(factor)` and `BoardView.fit()` from 03-board. Markup to
 - `load()` in `src/main.ts` reassigns `view`; the zoom button handlers must read it at click time.
 
 ## Implementation notes
+- [x] tests first: zoom buttons, fit on every load, stale-view check (3 failed before); the dark-background test already passed, since 00 wires `background`, so it pins
+- [x] markup and handlers in `main.ts` (they read `view` at click time)
+- [x] `.zoom-controls` CSS. It's outside this spec's files, but 03 never added it, so this spec adds it to `style.css` minimally: a column in the board's top-right, 36 px buttons.
+- [x] full tests (253), build, Chrome check at 390×844 (zoom in twice, then Fit restores; no errors)
+- [ ] review
+
+Interpretation: the dark-background check uses the editor's Play with a pale-yellow-on-black picture, because no built-in level has a background until 98.
 
 ## Result

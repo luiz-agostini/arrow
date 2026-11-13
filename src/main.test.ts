@@ -1,10 +1,11 @@
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { generate } from './generate';
 import { LEVELS } from './levels';
 import { startApp } from './main';
 import { blockerOf, exitRay } from './model';
 import { CELL, SPEED } from './render';
 import { freeArrows, solve } from './solve';
+import { paint } from './test-helpers';
 
 const level1 = generate(LEVELS[0].mask, LEVELS[0].seed);
 let root: HTMLElement;
@@ -177,4 +178,48 @@ test('tapping outside the open drawer closes it', () => {
   click('[data-role="level"]');
   expect(root.dataset.drawer).toBeUndefined();
   expect(text('level')).toBe('Heart');
+});
+
+describe('zoom buttons', () => {
+  const width = () => Number($('main svg.board').getAttribute('viewBox')!.split(' ')[2]);
+
+  test('zoom in, out and fit act on the board', () => {
+    startApp(root);
+    const fitWidth = width();
+    click('[data-action="zoom-in"]');
+    expect(width()).toBeCloseTo(fitWidth / 1.5, 2);
+    click('[data-action="zoom-in"]');
+    click('[data-action="zoom-out"]');
+    expect(width()).toBeCloseTo(fitWidth / 1.5, 2);
+    click('[data-action="zoom-fit"]');
+    expect(width()).toBe(fitWidth);
+  });
+
+  test('every load starts at fit', () => {
+    startApp(root);
+    click('[data-action="zoom-in"]');
+    click('[data-level="1"]');
+    const fish = generate(LEVELS[1].mask, LEVELS[1].seed);
+    expect($('main svg.board').getAttribute('viewBox')).toBe(`-24 -24 ${(fish.width + 2) * CELL} ${(fish.height + 2) * CELL}`);
+  });
+
+  test('after Restart the buttons act on the new board', () => {
+    startApp(root);
+    const fitWidth = width();
+    click('[data-action="zoom-in"]');
+    click('[data-action="restart"]');
+    click('[data-action="zoom-in"]');
+    expect(width()).toBeCloseTo(fitWidth / 1.5, 2);
+  });
+
+  test('a level with a dark background renders a dark board', async () => {
+    const pale = paint(100, 100, (x, y) => (x >= 20 && x < 80 && y >= 20 && y < 80 ? [250, 240, 150, 255] : [0, 0, 0, 255]));
+    startApp(root, { decodeImage: async () => pale });
+    const input = root.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', { value: [new File([''], 'pale.png')] });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await vi.waitFor(() => expect($('[data-action="play"]')).not.toBeNull());
+    click('[data-action="play"]');
+    expect(root.querySelector<SVGSVGElement>('main svg.board')!.dataset.bg).toBe('dark');
+  });
 });

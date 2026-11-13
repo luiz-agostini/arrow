@@ -51,6 +51,11 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
       <main class="stage">
         <svg class="board" role="img" aria-label="puzzle board"></svg>
         <p class="status" data-role="status" aria-live="polite"></p>
+        <div class="zoom-controls">
+          <button type="button" data-action="zoom-in" aria-label="Zoom in">+</button>
+          <button type="button" data-action="zoom-out" aria-label="Zoom out">−</button>
+          <button type="button" data-action="zoom-fit" aria-label="Fit board">Fit</button>
+        </div>
       </main>
       <footer class="controls">
         <button type="button" data-action="restart">Restart</button>
@@ -169,6 +174,10 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
     }
     if (action === 'restart') load(level, index);
     if (action === 'picture') input.click();
+    // `view` is read at click time, so the buttons follow whichever board is mounted.
+    if (action === 'zoom-in') view.zoom(1.5);
+    if (action === 'zoom-out') view.zoom(1 / 1.5);
+    if (action === 'zoom-fit') view.fit();
     if (action === 'hint' && game.status === 'playing') {
       const [id] = freeArrows(game.board);
       if (id !== undefined) view.highlight(id);

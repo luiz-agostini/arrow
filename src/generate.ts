@@ -6,14 +6,34 @@ const DIRS: Dir[] = ['U', 'D', 'L', 'R'];
 
 const key = (c: Cell) => `${c.x},${c.y}`;
 
-/** BFS distance from each mask cell to the nearest empty or out-of-bounds cell. */
+/** Empty cells connected to the board border; enclosed holes are excluded. */
+function exterior(mask: string[], width: number, height: number): Set<string> {
+  const out = new Set<string>();
+  const queue: Cell[] = [];
+  const visit = (c: Cell) => {
+    if (c.x < 0 || c.y < 0 || c.x >= width || c.y >= height) return;
+    if (mask[c.y][c.x] === '#' || out.has(key(c))) return;
+    out.add(key(c));
+    queue.push(c);
+  };
+  for (let x = 0; x < width; x++) [0, height - 1].forEach((y) => visit({ x, y }));
+  for (let y = 0; y < height; y++) [0, width - 1].forEach((x) => visit({ x, y }));
+  for (let i = 0; i < queue.length; i++) for (const d of DIRS) visit({ x: queue[i].x + STEP[d].x, y: queue[i].y + STEP[d].y });
+  return out;
+}
+
+/** BFS distance from each mask cell to the nearest exterior or out-of-bounds cell. */
 function depths(mask: string[], width: number, height: number): Map<string, number> {
+  const outside = exterior(mask, width, height);
   const depth = new Map<string, number>();
   const queue: Cell[] = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (mask[y][x] !== '#') continue;
-      const edge = DIRS.some((d) => mask[y + STEP[d].y]?.[x + STEP[d].x] !== '#');
+      const edge = DIRS.some((d) => {
+        const n = { x: x + STEP[d].x, y: y + STEP[d].y };
+        return n.x < 0 || n.y < 0 || n.x >= width || n.y >= height || outside.has(key(n));
+      });
       if (edge) {
         depth.set(key({ x, y }), 0);
         queue.push({ x, y });

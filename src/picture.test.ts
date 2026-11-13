@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { gridSize, pictureToLevel } from './picture';
-import { BLACK, BLUE, paint, RED, WHITE } from './test-helpers';
+import { BLACK, BLUE, paint, RED, WHITE, type Rgba } from './test-helpers';
 
 const inBox = (x: number, y: number, x0: number, y0: number, x1: number, y1: number) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
 const square = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) ? BLACK : WHITE));
@@ -71,6 +71,26 @@ describe('pictureToLevel', () => {
     const flat = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) ? [...colour] : WHITE));
     expect(pictureToLevel(flat, { cols: 10, colors: 4, invert: false }).cells).toBe(36);
     expect(pictureToLevel(flat, { cols: 10, colors: 4, invert: true }).cells).toBe(64);
+  });
+
+  test('anti-aliased edges do not add colours', () => {
+    const circle = paint(200, 200, (x, y) => {
+      const edge = Math.hypot(x + 0.5 - 100, y + 0.5 - 100) - 70;
+      const ink = Math.min(1, Math.max(0, 0.5 - edge / 3));
+      const v = Math.round(255 * (1 - ink));
+      return [v, v, v, 255];
+    });
+    const { palette } = pictureToLevel(circle, { cols: 20, colors: 4, invert: false });
+    expect(palette).toHaveLength(1);
+    expect([1, 3, 5].map((i) => parseInt(palette[0].slice(i, i + 2), 16)).every((v) => v <= 8)).toBe(true);
+  });
+
+  test('thin coloured lines keep their colour instead of mixing with the background', () => {
+    const GREEN: Rgba = [48, 192, 48, 255];
+    const lines = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) && x % 10 < 2 ? GREEN : [0, 0, 0, 255]));
+    const { palette, cells } = pictureToLevel(lines, { cols: 10, colors: 4, invert: true });
+    expect(cells).toBe(36);
+    expect(palette).toEqual(['#30c030']);
   });
 
   test('a plain picture has no shape', () => {

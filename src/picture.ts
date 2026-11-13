@@ -6,6 +6,8 @@ const TRANSPARENT_SHARE = 0.01;
 const MIN_CONTRAST = 16;
 const MIN_GROUP = 3;
 const KMEANS_ROUNDS = 10;
+/** Colours closer than this (RGB distance) are not seeded as separate groups. */
+const MIN_COLOUR_DIST = 48;
 
 type Rgb = [number, number, number];
 type CellColour = { rgb: Rgb; alpha: number; lum: number };
@@ -17,35 +19,44 @@ export function gridSize(width: number, height: number, cols: number): { cols: n
   return { cols: Math.max(1, Math.round(width / cell)), rows: Math.max(1, Math.round(height / cell)) };
 }
 
+const lumOf = (r: number, g: number, b: number) => 0.299 * r + 0.587 * g + 0.114 * b;
+
+/** Calls `visit` with the data offset of every pixel inside grid cell `cell`. */
+function eachPixel(p: Pixels, cols: number, rows: number, cell: number, visit: (i: number) => void): void {
+  const [gx, gy] = [cell % cols, Math.floor(cell / cols)];
+  const [x0, x1] = [Math.floor((gx * p.width) / cols), Math.floor(((gx + 1) * p.width) / cols)];
+  const [y0, y1] = [Math.floor((gy * p.height) / rows), Math.floor(((gy + 1) * p.height) / rows)];
+  for (let y = y0; y < Math.max(y1, y0 + 1); y++) {
+    for (let x = x0; x < Math.max(x1, x0 + 1); x++) visit((y * p.width + x) * 4);
+  }
+}
+
+/** Mean colour of the pixels in a cell that pass `keep`, or null when none do. */
+function meanColour(p: Pixels, cols: number, rows: number, cell: number, keep: (i: number) => boolean): Rgb | null {
+  const sum = [0, 0, 0];
+  let n = 0;
+  eachPixel(p, cols, rows, cell, (i) => {
+    if (!keep(i)) return;
+    sum[0] += p.data[i];
+    sum[1] += p.data[i + 1];
+    sum[2] += p.data[i + 2];
+    n++;
+  });
+  return n ? (sum.map((v) => v / n) as Rgb) : null;
+}
+
 /** Box-averages the picture into cells; colour is averaged over opaque pixels only. */
 function averageCells(p: Pixels, cols: number, rows: number): CellColour[] {
-  const out: CellColour[] = [];
-  for (let gy = 0; gy < rows; gy++) {
-    for (let gx = 0; gx < cols; gx++) {
-      const [x0, x1] = [Math.floor((gx * p.width) / cols), Math.floor(((gx + 1) * p.width) / cols)];
-      const [y0, y1] = [Math.floor((gy * p.height) / rows), Math.floor(((gy + 1) * p.height) / rows)];
-      const sum = [0, 0, 0];
-      let alpha = 0;
-      let opaque = 0;
-      let n = 0;
-      for (let y = y0; y < Math.max(y1, y0 + 1); y++) {
-        for (let x = x0; x < Math.max(x1, x0 + 1); x++) {
-          const i = (y * p.width + x) * 4;
-          alpha += p.data[i + 3];
-          n++;
-          if (p.data[i + 3] >= OPAQUE) {
-            sum[0] += p.data[i];
-            sum[1] += p.data[i + 1];
-            sum[2] += p.data[i + 2];
-            opaque++;
-          }
-        }
-      }
-      const rgb = sum.map((v) => (opaque ? v / opaque : 255)) as Rgb;
-      out.push({ rgb, alpha: alpha / n, lum: 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2] });
-    }
-  }
-  return out;
+  return Array.from({ length: cols * rows }, (_, cell) => {
+    let alpha = 0;
+    let n = 0;
+    eachPixel(p, cols, rows, cell, (i) => {
+      alpha += p.data[i + 3];
+      n++;
+    });
+    const rgb = meanColour(p, cols, rows, cell, (i) => p.data[i + 3] >= OPAQUE) ?? [255, 255, 255];
+    return { rgb, alpha: alpha / n, lum: lumOf(...rgb) };
+  });
 }
 
 /** Otsu's threshold over 0–255 values: the split with the largest between-class variance. */
@@ -106,6 +117,7 @@ function quantize(colours: Rgb[], k: number): { labels: number[]; centres: Rgb[]
       const d = Math.min(...centres.map((m) => dist2(c, m)));
       if (d > farD) [far, farD] = [c, d];
     }
+    if (farD < MIN_COLOUR_DIST ** 2) break;
     centres.push(far);
   }
   let labels: number[] = [];
@@ -139,15 +151,17 @@ export function pictureToLevel(
   let transparent = 0;
   for (let i = 3; i < p.data.length; i += 4) if (p.data[i] < OPAQUE) transparent++;
 
-  let on: boolean[];
+  // `shapeSide` decides cells from their averages and, below, which pixels give a cell its colour.
+  let shapeSide: (alpha: number, lum: number) => boolean;
   if (transparent / (p.width * p.height) >= TRANSPARENT_SHARE) {
-    on = cells.map((c) => (c.alpha >= OPAQUE) !== opts.invert);
+    shapeSide = (alpha) => alpha >= OPAQUE !== opts.invert;
   } else {
     const lums = cells.map((c) => c.lum);
     const flat = Math.max(...lums) - Math.min(...lums) < MIN_CONTRAST;
     const t = otsu(lums);
-    on = cells.map((c) => !flat && (Math.round(c.lum) <= t) !== opts.invert);
+    shapeSide = (_, lum) => !flat && (Math.round(lum) <= t) !== opts.invert;
   }
+  const on = cells.map((c) => shapeSide(c.alpha, c.lum));
 
   for (const g of groups(on, cols, rows, true)) if (g.length < MIN_GROUP) for (const i of g) on[i] = false;
   for (const g of groups(on, cols, rows, false)) {
@@ -157,8 +171,18 @@ export function pictureToLevel(
 
   const shape = on.flatMap((v, i) => (v ? [i] : []));
   if (!shape.length) return { mask: Array.from({ length: rows }, () => '.'.repeat(cols)), palette: [], cells: 0 };
+  // Colour comes from the shape's own pixels, so edges and thin lines don't mix in the background.
+  const own = new Map<number, Rgb | null>(
+    shape.map((i) => [
+      i,
+      meanColour(p, cols, rows, i, (px) => shapeSide(p.data[px + 3], lumOf(p.data[px], p.data[px + 1], p.data[px + 2]))),
+    ]),
+  );
+  // A filled pinhole has no shape pixels; it borrows a neighbour's colour.
+  const colourOf = (i: number): Rgb =>
+    own.get(i) ?? [i - 1, i + 1, i - cols, i + cols].map((n) => own.get(n)).find((c) => c) ?? cells[i].rgb;
   const { labels, centres } = quantize(
-    shape.map((i) => cells[i].rgb),
+    shape.map(colourOf),
     opts.colors,
   );
   const chars = new Array(cols * rows).fill('.');

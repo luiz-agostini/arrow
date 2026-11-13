@@ -220,6 +220,8 @@ function attachInput(
     let m = magnifiers.get(svg);
     if (!m) {
       m = el('svg', { class: 'magnifier', hidden: '' });
+      // Same backdrop as the board, so the svg[data-bg] colours apply inside the loupe too.
+      if (svg.dataset.bg) m.dataset.bg = svg.dataset.bg;
       m.append(el('use', { href: `#${contentId}` }));
       document.body.append(m);
       magnifiers.set(svg, m);

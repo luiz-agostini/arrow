@@ -1,6 +1,6 @@
 # 03-board: Dense rendering, precise taps and zoom
 
-Status: in-progress
+Status: done
 Depends on: 00-contracts
 Size: L
 
@@ -106,12 +106,13 @@ export function viewBox(v: View, board: { width: number; height: number }): stri
 - [x] magnifier moved to `<body>` and created lazily on the first touch press, so `main svg` stays the board and untouched boards (the editor preview) never get one. The test for this was written right after the change rather than before it.
 - [x] checked in Chrome: a real mouse click on a free arrow commits through `getScreenCTM`; the wheel zooms around the cursor; a touch press (390×844, touch emulation) aims and shows the magnifier; no page errors
 - [x] full tests (234), build
-- [ ] review. Round 1 fixes, each test-first:
+- [x] review: APPROVE after one fix round. Round 1 fixes, each test-first:
   - medium: aim/hover/blocker/hint colours now come from the level backdrop (`svg[data-bg]` sets `--hover`, `--warn`, `--good`; each at least 3:1 on its backdrop)
   - low: only the primary mouse button taps
   - low: a lifting finger leaves the remaining two with a fresh pinch baseline
   - low: pin test that a cancelled press doesn't commit
   - also: `lostpointercapture` forgets the pointer, so a lost capture can't make every later tap count as a second finger
+  - after approval: the magnifier copies the board's `data-bg`, so the loupe uses the backdrop's feedback colours (test-first)
 
 Interpretations of the spec:
 - **Screen to cell:** without `opts.toCell`, render uses `svg.getScreenCTM()` (scale and offset terms `a`, `d`, `e`, `f`; no rotation). The pick radius in cells is the pixel radius times the cells-per-pixel ratio measured from the same mapping, so a stubbed `toCell` gets a consistent radius.
@@ -120,3 +121,18 @@ Interpretations of the spec:
 - **Outside the spec's files:** `main.test.ts` (owned by 99) changes minimally. Its tap helper now dispatches pointer events at the arrow's head cell, and it stubs `getScreenCTM`, because decision 0007 makes `click` on hit paths inert.
 
 ## Result
+- **New pure modules:**
+  - `hit.ts` `pickArrow`: nearest arrow body, ambiguous within 0.25 cell.
+  - `viewport.ts`: `fit`, `zoomAt`, `pan`, `viewBox`, with scale from 1 to 8. `CELL` now lives here.
+- **render.ts:**
+  - Pointer input: press aims, move re-aims, release commits, drag-off and cancel abort. An ambiguous quick tap waits for a confirming tap; two fingers never tap; only the primary mouse button taps.
+  - Touch magnifier: lazy, in `<body>`, one `<use>`.
+  - Zoom: `zoom()`, `fit()`, wheel, pinch with pan.
+  - Per-level backdrop with `--arrow-c` fitted to it.
+  - Strokes 5.5, heads 0.32 cell wide; blocker and hint cues at 8.
+- **style.css:** aim and magnifier styles, backdrop fills and per-backdrop feedback colours, `touch-action: none` on the board.
+- **Outside the spec's files (recorded):** `main.test.ts` taps with pointer events and stubs `getScreenCTM`; `editor.test.ts` expects `--arrow-c` on preview arrows.
+- **Checks:** `npm test` 240 passed, `npm run build` passes. In Chrome, a real mouse click commits through `getScreenCTM`, the wheel zooms around the cursor, and a touch press aims and shows the magnifier. Reviewer verdict: APPROVE.
+- **Left for a device test:** iOS capture behaviour, three-finger sequences, and the aim colour inside the magnifier's `<use>` copy.
+
+DONE

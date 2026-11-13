@@ -343,3 +343,13 @@ test('aim, hover, blocker and hint colours follow a level backdrop, not the page
     for (const token of ['--hover', '--warn', '--good']) expect(rule, `${bg} ${token}`).toContain(token);
   }
 });
+
+test('the magnifier carries the level backdrop, so its colours match the board', () => {
+  mountBoard(svg, board, () => {}, { toCell, background: 'dark' });
+  pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+  expect(document.querySelector<SVGSVGElement>('svg.magnifier')!.dataset.bg).toBe('dark');
+  pointer('pointerup', 1.5, 2.5, { pointerType: 'touch' });
+  mountBoard(svg, board, () => {}, { toCell });
+  pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+  expect(document.querySelector<SVGSVGElement>('svg.magnifier')!.dataset.bg).toBeUndefined();
+});

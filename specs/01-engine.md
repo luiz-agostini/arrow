@@ -56,7 +56,7 @@ export function solve(b: Board): number[] | null;       // unchanged signature
 ## Implementation notes
 - [x] perf test (64×80 full and two-region masks under 1500 ms) — failed at ~2950 ms before the change
 - [x] `freeArrows`/`solve` with one owner map per state, updated incrementally (measured: generate 31 ms, solve 2934 ms before)
-- [x] `absorbSingles` index: skipped on purpose. Profiling showed `generate` takes 31 ms on a 64×80 mask, so the index adds risk without a measurable gain; behaviour 2 is left unimplemented
+- [x] `absorbSingles` index (behaviour 2): first skipped on performance evidence, then implemented after review asked for it. It's a cell → crossing-arrow index; all 22 snapshots are unchanged, so the boards are identical
 - [x] longer arrows: `MAX_LEN = 12`, biased target length; average-length test (failed at 3.43 before)
   - Long targets alone stranded cells (coverage 0.93, average 3.18 on some seeds). Added two things the spec didn't name, both inside `generate.ts`:
     - the body walk prefers the neighbour with the fewest free neighbours (Warnsdorff), ties broken by the seeded RNG

@@ -157,6 +157,9 @@ function absorbSingles(size: { width: number; height: number }, arrows: Arrow[])
   const out = arrows.map((a) => ({ ...a, cells: [...a.cells] }));
   const gone = new Set<number>();
   const rays = out.map((a) => new Set(exitRay({ ...size, arrows: [] }, a).map(key)));
+  // Cell → indices of the arrows whose rays cross it, in placement order.
+  const crossers = new Map<string, number[]>();
+  rays.forEach((ray, k) => ray.forEach((c) => crossers.set(c, [...(crossers.get(c) ?? []), k])));
   out.forEach((single, i) => {
     if (single.cells.length !== 1) return;
     const s = single.cells[0];
@@ -169,7 +172,7 @@ function absorbSingles(size: { width: number; height: number }, arrows: Arrow[])
         Math.abs(a.cells[0].x - s.x) + Math.abs(a.cells[0].y - s.y) === 1 &&
         (a.cells.length > 1 || (a.cells[0].x - STEP[a.dir].x === s.x && a.cells[0].y - STEP[a.dir].y === s.y)) &&
         !rays[j].has(key(s)) &&
-        out.every((_, k) => gone.has(k) || k <= Math.min(i, j) || k >= Math.max(i, j) || !rays[k].has(key(s))),
+        (crossers.get(key(s)) ?? []).every((k) => gone.has(k) || k <= Math.min(i, j) || k >= Math.max(i, j)),
     );
     if (j < 0) return;
     out[j].cells.unshift(s);

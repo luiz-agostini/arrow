@@ -85,12 +85,29 @@ describe('pictureToLevel', () => {
     expect([1, 3, 5].map((i) => parseInt(palette[0].slice(i, i + 2), 16)).every((v) => v <= 8)).toBe(true);
   });
 
-  test('thin coloured lines keep their colour instead of mixing with the background', () => {
+  test('thin coloured lines on black are found without invert and keep their colour', () => {
     const GREEN: Rgba = [48, 192, 48, 255];
     const lines = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) && x % 10 < 2 ? GREEN : [0, 0, 0, 255]));
-    const { palette, cells } = pictureToLevel(lines, { cols: 10, colors: 4, invert: true });
+    const { palette, cells } = pictureToLevel(lines, { cols: 10, colors: 4, invert: false });
     expect(cells).toBe(36);
     expect(palette).toEqual(['#30c030']);
+  });
+
+  test('light parts of a subject on a white background are kept', () => {
+    const HAIR: Rgba = [40, 30, 20, 255];
+    const SKIN: Rgba = [232, 205, 185, 255];
+    const portrait = paint(100, 100, (x, y) => (inBox(x, y, 20, 10, 79, 39) ? HAIR : inBox(x, y, 20, 40, 79, 89) ? SKIN : WHITE));
+    const { mask, cells } = pictureToLevel(portrait, { cols: 10, colors: 4, invert: false });
+    expect(cells).toBe(48);
+    expect(mask[6][5]).not.toBe('.');
+    expect(mask[2][5]).not.toBe(mask[6][5]);
+  });
+
+  test('a busy border falls back to the brightness split', () => {
+    const halves = paint(100, 100, (x) => (x < 50 ? BLACK : WHITE));
+    const { mask, cells } = pictureToLevel(halves, { cols: 10, colors: 4, invert: false });
+    expect(cells).toBe(50);
+    expect(mask.every((row) => row.slice(0, 5) === '00000' && row.slice(5) === '.....')).toBe(true);
   });
 
   test('a plain picture has no shape', () => {

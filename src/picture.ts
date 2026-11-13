@@ -8,6 +8,12 @@ const MIN_GROUP = 3;
 const KMEANS_ROUNDS = 10;
 /** Colours closer than this (RGB distance) are not seeded as separate groups. */
 const MIN_COLOUR_DIST = 48;
+/** A pixel this far (RGB distance) from the background colour belongs to the shape. */
+const BG_DISTANCE = 32;
+/** Colour groups smaller than this share of the shape (or 3 cells) merge into their nearest group. */
+const MIN_GROUP_SHARE = 0.05;
+/** Share of border pixels that must match the background colour for it to count as plain. */
+const PLAIN_BORDER_SHARE = 0.8;
 
 type Rgb = [number, number, number];
 type CellColour = { rgb: Rgb; alpha: number; lum: number };
@@ -129,6 +135,18 @@ function quantize(colours: Rgb[], k: number): { labels: number[]; centres: Rgb[]
       return [0, 1, 2].map((ch) => members.reduce((s, c) => s + c[ch], 0) / members.length) as Rgb;
     });
   }
+  // Merge tiny groups, smallest first, so stray edge cells don't get a colour of their own.
+  const minSize = Math.max(MIN_GROUP, MIN_GROUP_SHARE * colours.length);
+  for (;;) {
+    const sizes = centres.map((_, i) => labels.filter((l) => l === i).length);
+    const live = sizes.flatMap((n, i) => (n > 0 ? [i] : []));
+    const small = live.filter((i) => sizes[i] < minSize).sort((a, b) => sizes[a] - sizes[b] || a - b)[0];
+    if (live.length < 2 || small === undefined) break;
+    const into = live.filter((i) => i !== small).reduce((bi, i) => (dist2(centres[small], centres[i]) < dist2(centres[small], centres[bi]) ? i : bi));
+    labels = labels.map((l) => (l === small ? into : l));
+    const members = colours.filter((_, j) => labels[j] === into);
+    centres[into] = [0, 1, 2].map((ch) => members.reduce((s, c) => s + c[ch], 0) / members.length) as Rgb;
+  }
   const order = centres
     .map((_, i) => ({ i, n: labels.filter((l) => l === i).length }))
     .filter((c) => c.n > 0)
@@ -138,9 +156,27 @@ function quantize(colours: Rgb[], k: number): { labels: number[]; centres: Rgb[]
 }
 
 /**
+ * The picture's background colour when its border is nearly one colour (the per-channel
+ * median of the border pixels), or null when the border is busy.
+ */
+function plainBackground(p: Pixels): Rgb | null {
+  const border: Rgb[] = [];
+  const add = (x: number, y: number) => {
+    const i = (y * p.width + x) * 4;
+    border.push([p.data[i], p.data[i + 1], p.data[i + 2]]);
+  };
+  for (let x = 0; x < p.width; x++) [0, p.height - 1].forEach((y) => add(x, y));
+  for (let y = 1; y < p.height - 1; y++) [0, p.width - 1].forEach((x) => add(x, y));
+  const median = [0, 1, 2].map((ch) => border.map((c) => c[ch]).sort((a, b) => a - b)[border.length >> 1]) as Rgb;
+  const matching = border.filter((c) => dist2(c, median) <= BG_DISTANCE ** 2).length;
+  return matching / border.length >= PLAIN_BORDER_SHARE ? median : null;
+}
+
+/**
  * Turns a picture into a region mask and palette. Shape cells are the opaque ones
- * when the picture has transparency, otherwise the darker side of an Otsu split
- * (swapped by `invert`). Small specks are dropped and pinholes filled.
+ * when the picture has transparency; otherwise, when the border is one plain colour,
+ * the cells that differ from it; otherwise the darker side of an Otsu split. `invert`
+ * swaps shape and background. Small specks are dropped and pinholes filled.
  */
 export function pictureToLevel(
   p: Pixels,
@@ -152,16 +188,21 @@ export function pictureToLevel(
   for (let i = 3; i < p.data.length; i += 4) if (p.data[i] < OPAQUE) transparent++;
 
   // `shapeSide` decides cells from their averages and, below, which pixels give a cell its colour.
-  let shapeSide: (alpha: number, lum: number) => boolean;
+  let shapeSide: (alpha: number, rgb: Rgb) => boolean;
+  const bg = plainBackground(p);
   if (transparent / (p.width * p.height) >= TRANSPARENT_SHARE) {
     shapeSide = (alpha) => alpha >= OPAQUE !== opts.invert;
+  } else if (bg) {
+    const far = (rgb: Rgb) => dist2(rgb, bg) > BG_DISTANCE ** 2;
+    const any = cells.some((c) => far(c.rgb));
+    shapeSide = (_, rgb) => any && far(rgb) !== opts.invert;
   } else {
     const lums = cells.map((c) => c.lum);
     const flat = Math.max(...lums) - Math.min(...lums) < MIN_CONTRAST;
     const t = otsu(lums);
-    shapeSide = (_, lum) => !flat && (Math.round(lum) <= t) !== opts.invert;
+    shapeSide = (_, rgb) => !flat && (Math.round(lumOf(...rgb)) <= t) !== opts.invert;
   }
-  const on = cells.map((c) => shapeSide(c.alpha, c.lum));
+  const on = cells.map((c) => shapeSide(c.alpha, c.rgb));
 
   for (const g of groups(on, cols, rows, true)) if (g.length < MIN_GROUP) for (const i of g) on[i] = false;
   for (const g of groups(on, cols, rows, false)) {
@@ -172,12 +213,19 @@ export function pictureToLevel(
   const shape = on.flatMap((v, i) => (v ? [i] : []));
   if (!shape.length) return { mask: Array.from({ length: rows }, () => '.'.repeat(cols)), palette: [], cells: 0 };
   // Colour comes from the shape's own pixels, so edges and thin lines don't mix in the background.
-  const own = new Map<number, Rgb | null>(
-    shape.map((i) => [
-      i,
-      meanColour(p, cols, rows, i, (px) => shapeSide(p.data[px + 3], lumOf(p.data[px], p.data[px + 1], p.data[px + 2]))),
-    ]),
-  );
+  // On a plain background, only each cell's strongest pixels count (at least half as far from
+  // the background as the farthest one), so anti-aliased edges don't add washed-out colours.
+  const rgbAt = (px: number): Rgb => [p.data[px], p.data[px + 1], p.data[px + 2]];
+  const ownColour = (i: number) => {
+    const isShape = (px: number) => shapeSide(p.data[px + 3], rgbAt(px));
+    if (!bg || opts.invert) return meanColour(p, cols, rows, i, isShape);
+    let farthest = 0;
+    eachPixel(p, cols, rows, i, (px) => {
+      if (isShape(px)) farthest = Math.max(farthest, dist2(rgbAt(px), bg));
+    });
+    return meanColour(p, cols, rows, i, (px) => isShape(px) && dist2(rgbAt(px), bg) >= farthest / 4);
+  };
+  const own = new Map<number, Rgb | null>(shape.map((i) => [i, ownColour(i)]));
   // A filled pinhole has no shape pixels; it borrows a neighbour's colour.
   const colourOf = (i: number): Rgb =>
     own.get(i) ?? [i - 1, i + 1, i - cols, i + cols].map((n) => own.get(n)).find((c) => c) ?? cells[i].rgb;

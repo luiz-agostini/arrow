@@ -1,6 +1,6 @@
 # 98-photo-levels: Regenerate the 16 photo levels
 
-Status: ready
+Status: in-progress
 Depends on: 00-contracts, 01-engine, 02-colour, 04-editor
 Size: S
 
@@ -56,5 +56,12 @@ Each entry is produced by `serializeLevel(level)` from `src/editor.ts`, from `pi
 - In the dev server, `page.evaluate(() => import('/src/editor.ts'))` gives access to `decodeImage` and `serializeLevel`; `/pics/<file>` is served from the main checkout only, so run the dev server from `/Users/luiz/work/arrow` or copy the photos into the worktree's ignored `pics/`.
 
 ## Implementation notes
+- [x] regenerated all 16 with the app's own `decodeImage`, `pictureToLevel` (40 columns, 'auto') and `serializeLevel`, in Chrome through the Vite dev server (the script stays outside the repo)
+  - Every photo reaches 100% coverage with seed 1, thanks to 01's gap filling; all are solvable; 8–10 colours each. Sunglasses gets a dark background, the rest light.
+  - Masks run from 26×80 to 40×80; none is over 64×80.
+- [x] name drift: a contact sheet of each photo beside its regenerated level confirms all 16 names
+- [x] snapshots: 16 updated (the photo levels only); the six shape levels are unchanged
+- [x] full tests and build
+- [ ] review
 
 ## Result

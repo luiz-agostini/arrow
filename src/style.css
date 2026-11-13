@@ -149,11 +149,25 @@ body {
   cursor: default;
 }
 
-/* Arrows */
+/* Arrows. A picture level sets --arrow-light and --arrow-dark per arrow. */
+
+.arrow {
+  --arrow-c: var(--arrow-light, var(--arrow));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .arrow {
+    --arrow-c: var(--arrow-dark, var(--arrow));
+  }
+}
+
+:root[data-theme='dark'] .arrow {
+  --arrow-c: var(--arrow-dark, var(--arrow));
+}
 
 .arrow .body {
   fill: none;
-  stroke: var(--arrow);
+  stroke: var(--arrow-c);
   stroke-width: 3.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -161,7 +175,7 @@ body {
 }
 
 .arrow .head {
-  fill: var(--arrow);
+  fill: var(--arrow-c);
   transition: fill 120ms;
 }
 
@@ -187,6 +201,7 @@ body {
 
 .arrow.hint .body {
   stroke: var(--good);
+  animation: pulse 900ms ease-in-out infinite;
 }
 
 .arrow.hint .head {
@@ -195,6 +210,8 @@ body {
 
 .arrow.blocker .body {
   stroke: var(--warn);
+  stroke-width: 6;
+  filter: drop-shadow(0 0 3px var(--warn));
 }
 
 .arrow.blocker .head {
@@ -229,8 +246,19 @@ body {
   }
 }
 
+@keyframes pulse {
+  50% {
+    stroke-width: 6.5;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arrow.blocked {
     animation: none;
+  }
+
+  .arrow.hint .body {
+    animation: none;
+    stroke-width: 6;
   }
 }

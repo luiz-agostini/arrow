@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type { Board } from './model';
+import { DARK_BG, fitContrast, LIGHT_BG } from './colors';
 import { mountBoard } from './render';
+import css from './style.css?raw';
 
 const board: Board = {
   width: 5,
@@ -76,4 +78,31 @@ test('highlight marks an arrow as the hint', () => {
   const view = mountBoard(svg, board, () => {});
   view.highlight(2);
   expect(svg.querySelector('g.arrow[data-id="2"]')!.classList.contains('hint')).toBe(true);
+});
+
+test('a palette colours arrows by region, fitted to both themes', () => {
+  const coloured: Board = {
+    ...board,
+    arrows: [
+      { ...board.arrows[0], region: 0 },
+      { ...board.arrows[1], region: 1 },
+    ],
+  };
+  mountBoard(svg, coloured, () => {}, ['#ff0000', '#0000ff']);
+  const style = (id: number) => svg.querySelector<SVGGElement>(`g.arrow[data-id="${id}"]`)!.style;
+  expect(style(1).getPropertyValue('--arrow-light')).toBe(fitContrast('#ff0000', LIGHT_BG));
+  expect(style(1).getPropertyValue('--arrow-dark')).toBe(fitContrast('#ff0000', DARK_BG));
+  expect(style(2).getPropertyValue('--arrow-light')).toBe(fitContrast('#0000ff', LIGHT_BG));
+  expect(style(2).getPropertyValue('--arrow-dark')).toBe(fitContrast('#0000ff', DARK_BG));
+});
+
+test('without a palette arrows keep the theme colour', () => {
+  mountBoard(svg, board, () => {});
+  expect(svg.querySelector<SVGGElement>('g.arrow')!.style.getPropertyValue('--arrow-light')).toBe('');
+});
+
+test('blocker and hint feedback do not rely on colour alone', () => {
+  const rule = (selector: string) => css.match(new RegExp(`${selector.replace(/\./g, '\\.')}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+  expect(rule('.arrow.blocker .body')).toMatch(/stroke-width/);
+  expect(rule('.arrow.hint .body')).toMatch(/animation/);
 });

@@ -1,3 +1,4 @@
+import { DARK_BG, fitContrast, LIGHT_BG } from './colors';
 import { exitRay, head, STEP, type Arrow, type Board, type Cell } from './model';
 
 export const CELL = 24;
@@ -59,13 +60,18 @@ function drawArrow(b: Board, a: Arrow): Drawn {
   return { group, body, head: headEl, travel };
 }
 
-export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => void): BoardView {
+export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => void, palette?: string[]): BoardView {
   svg.replaceChildren();
   svg.setAttribute('viewBox', `${-CELL} ${-CELL} ${(b.width + 2) * CELL} ${(b.height + 2) * CELL}`);
   const drawn = new Map<number, Drawn>();
   const arrows = new Map(b.arrows.map((a) => [a.id, a]));
   for (const a of b.arrows) {
     const d = drawArrow(b, a);
+    const colour = palette?.[a.region ?? 0];
+    if (colour) {
+      d.group.style.setProperty('--arrow-light', fitContrast(colour, LIGHT_BG));
+      d.group.style.setProperty('--arrow-dark', fitContrast(colour, DARK_BG));
+    }
     drawn.set(a.id, d);
     svg.append(d.group);
   }

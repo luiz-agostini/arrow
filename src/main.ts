@@ -132,7 +132,7 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
     loads++;
     const board = generate(next.mask, next.seed);
     game = newGame(board);
-    view = mountBoard(svg, board, onTap, next.palette);
+    view = mountBoard(svg, board, onTap, { palette: next.palette, background: next.background });
     update();
   };
 

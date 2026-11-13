@@ -62,7 +62,7 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
   let level: Level | null = null;
 
   const render = () => {
-    const { mask, palette, cells } = pictureToLevel(pixels, {
+    const { mask, palette, cells, background } = pictureToLevel(pixels, {
       cols: Number(size.value),
       colors: Number(colors.value),
       invert: invert.checked,
@@ -77,7 +77,7 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
     }
     level = { name: 'Your picture', mask, seed, palette };
     const board = generate(mask, seed);
-    mountBoard(svg, board, () => {}, palette);
+    mountBoard(svg, board, () => {}, { palette, background });
     const covered = board.arrows.reduce((n, a) => n + a.cells.length, 0);
     status.textContent = '';
     coverage.textContent = `Coverage ${Math.round((covered / cells) * 100)}%`;

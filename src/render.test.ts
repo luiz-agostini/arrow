@@ -88,12 +88,20 @@ test('a palette colours arrows by region, fitted to both themes', () => {
       { ...board.arrows[1], region: 1 },
     ],
   };
-  mountBoard(svg, coloured, () => {}, ['#ff0000', '#0000ff']);
+  mountBoard(svg, coloured, () => {}, { palette: ['#ff0000', '#0000ff'] });
   const style = (id: number) => svg.querySelector<SVGGElement>(`g.arrow[data-id="${id}"]`)!.style;
   expect(style(1).getPropertyValue('--arrow-light')).toBe(fitContrast('#ff0000', LIGHT_BG));
   expect(style(1).getPropertyValue('--arrow-dark')).toBe(fitContrast('#ff0000', DARK_BG));
   expect(style(2).getPropertyValue('--arrow-light')).toBe(fitContrast('#0000ff', LIGHT_BG));
   expect(style(2).getPropertyValue('--arrow-dark')).toBe(fitContrast('#0000ff', DARK_BG));
+});
+
+test('zoom and fit can be called', () => {
+  const view = mountBoard(svg, board, () => {}, { background: 'dark' });
+  expect(() => {
+    view.zoom(2);
+    view.fit();
+  }).not.toThrow();
 });
 
 test('without a palette arrows keep the theme colour', () => {

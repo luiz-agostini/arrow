@@ -98,5 +98,17 @@ Call sites: `main.ts` passes `{ palette: level.palette, background: level.backgr
 - The `fitContrast` and `contrastRatio` helpers in `src/colors.ts` support the stand-in background choice.
 
 ## Implementation notes
+- [x] colors: `toLab`, `deltaE` (tests first)
+- [x] model: `regionAt` accepts `0`–`9` (existing `'6'` → null case flips to 6, required by Behavior 1)
+- [x] levels: `Level.background`, character check `/^[#.0-9]+$/`, background check
+- [x] picture: `colors: number | 'auto'`, `background` stand-in, `MAX_ROWS = 80` (updates the `gridSize` test, which assumed 40)
+- [x] render: `BoardOptions` object, `zoom`/`fit` no-ops; update call sites in render.test, editor, main
+- [x] `npm test`, typecheck; [ ] `vite build` (permission prompt blocked it in this session); review
+
+Decisions:
+- `MAX_ROWS` moved from 40 to 80 because the Interfaces section lists it; built-in levels store masks, so no board changes.
+- Empty palette (no shape) reports `background: 'light'`.
+- The editor passes `background` to `mountBoard` but doesn't yet store it on the playable `Level`; that is left to 02/03 to keep this change to call sites.
+- `background` and `toCell` are accepted by `mountBoard` but unused until 03.
 
 ## Result

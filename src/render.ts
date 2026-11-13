@@ -11,6 +11,15 @@ export type BoardView = {
   slideOut(id: number): Promise<void>;
   flashBlocked(id: number, blocker: number): void;
   highlight(id: number): void;
+  zoom(factor: number): void;
+  fit(): void;
+};
+
+export type BoardOptions = {
+  palette?: string[];
+  background?: 'light' | 'dark';
+  /** Maps client coordinates to board cells; for tests only. */
+  toCell?: (clientX: number, clientY: number) => { x: number; y: number };
 };
 
 type Drawn = { group: SVGGElement; body: SVGPathElement; head: SVGPolygonElement; travel: number };
@@ -60,7 +69,8 @@ function drawArrow(b: Board, a: Arrow): Drawn {
   return { group, body, head: headEl, travel };
 }
 
-export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => void, palette?: string[]): BoardView {
+export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => void, opts: BoardOptions = {}): BoardView {
+  const { palette } = opts;
   svg.replaceChildren();
   svg.setAttribute('viewBox', `${-CELL} ${-CELL} ${(b.width + 2) * CELL} ${(b.height + 2) * CELL}`);
   const drawn = new Map<number, Drawn>();
@@ -121,5 +131,7 @@ export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => 
       for (const d of drawn.values()) d.group.classList.remove('hint');
       drawn.get(id)?.group.classList.add('hint');
     },
+    zoom() {},
+    fit() {},
   };
 }

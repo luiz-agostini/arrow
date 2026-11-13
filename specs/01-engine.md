@@ -57,8 +57,13 @@ export function solve(b: Board): number[] | null;       // unchanged signature
 - [x] perf test (64×80 full and two-region masks under 1500 ms) — failed at ~2950 ms before the change
 - [x] `freeArrows`/`solve` with one owner map per state, updated incrementally (measured: generate 31 ms, solve 2934 ms before)
 - [x] `absorbSingles` index: skipped on purpose. Profiling showed `generate` takes 31 ms on a 64×80 mask, so the index adds risk without a measurable gain; behaviour 2 is left unimplemented
-- [ ] longer arrows: `MAX_LEN = 12`, biased target length; average-length test
-- [ ] regenerate snapshots (deliberate), full tests and build
+- [x] longer arrows: `MAX_LEN = 12`, biased target length; average-length test (failed at 3.43 before)
+  - Long targets alone stranded cells (coverage 0.93, average 3.18 on some seeds). Added two things the spec didn't name, both inside `generate.ts`:
+    - the body walk prefers the neighbour with the fewest free neighbours (Warnsdorff), ties broken by the seeded RNG
+    - `fillGaps`: an uncovered cell joins a same-region arrow's tail when neither that arrow nor any later arrow has it in its ray; otherwise it is inserted as a single after every arrow whose ray crosses it and before any arrow in its own ray. Same solvability argument as `absorbSingles`.
+  - Without `fillGaps`, Thumbs Up (0.947) and Smiles (0.944) fell below 95% with their stored seeds, and this spec may not change `levels.ts`.
+- [x] regenerate snapshots (deliberate: 22 updated), full tests (192) and build pass
+- [x] 200-seed two-region `checkBoard` pin (written after the code, so it pins rather than drives)
 - [ ] review
 
 ## Result

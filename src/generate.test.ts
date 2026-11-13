@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { generate } from './generate';
+import { generate, MAX_LEN } from './generate';
 import { mulberry32 } from './rng';
 import { checkBoard } from './test-helpers';
 
@@ -57,4 +57,18 @@ describe('colour regions', () => {
     checkBoard(stripes, b);
     for (const a of b.arrows) expect(new Set(a.cells.map((c) => c.y)).size).toBe(1);
   });
+});
+
+test('arrows are long on average and never longer than 12', () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    const lengths = generate(square, seed).arrows.map((a) => a.cells.length);
+    expect(Math.max(...lengths)).toBeLessThanOrEqual(12);
+    expect(lengths.reduce((s, n) => s + n, 0) / lengths.length, `seed ${seed}`).toBeGreaterThanOrEqual(3.5);
+  }
+  expect(MAX_LEN).toBe(12);
+});
+
+test('merging and gap filling keep 200 two-region boards valid and solvable', () => {
+  const twoRegions = Array.from({ length: 20 }, (_, y) => '0'.repeat(8 + (y % 5)) + '1'.repeat(12 - (y % 5)));
+  for (let seed = 1; seed <= 200; seed++) checkBoard(twoRegions, generate(twoRegions, seed));
 });

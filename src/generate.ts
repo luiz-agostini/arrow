@@ -1,7 +1,7 @@
 import { exitRay, regionAt, STEP, type Arrow, type Board, type Cell, type Dir } from './model';
 import { mulberry32, shuffle } from './rng';
 
-export const MAX_LEN = 8;
+export const MAX_LEN = 12;
 const DIRS: Dir[] = ['U', 'D', 'L', 'R'];
 
 const key = (c: Cell) => `${c.x},${c.y}`;
@@ -98,7 +98,54 @@ export function generate(mask: string[], seed: number): Board {
     for (const c of best.cells) placed.add(key(c));
     arrows.push(best);
   }
+  fillGaps(mask, size, arrows, placed);
   return { width, height, arrows: absorbSingles(size, arrows) };
+}
+
+/**
+ * Attaches uncovered cells to the tail of a neighbouring arrow in the same region,
+ * or failing that inserts them as single-cell arrows (merged later by absorbSingles).
+ * That is as if the cell had been part of the arrow when it was placed, which stays
+ * solvable when neither the arrow nor any arrow placed after it has the cell in its ray.
+ * Repeats until nothing changes, so chains of gaps fill from their ends.
+ */
+function fillGaps(mask: string[], size: { width: number; height: number }, arrows: Arrow[], placed: Set<string>): void {
+  const rays = arrows.map((a) => new Set(exitRay({ ...size, arrows: [] }, a).map(key)));
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (let y = 0; y < size.height; y++) {
+      for (let x = 0; x < size.width; x++) {
+        const c = { x, y };
+        const region = regionAt(mask, c);
+        if (region === null || placed.has(key(c))) continue;
+        const host = arrows.findIndex(
+          (a, j) =>
+            a.region === region &&
+            a.cells.length < MAX_LEN &&
+            Math.abs(a.cells[0].x - x) + Math.abs(a.cells[0].y - y) === 1 &&
+            (a.cells.length > 1 || (a.cells[0].x - STEP[a.dir].x === x && a.cells[0].y - STEP[a.dir].y === y)) &&
+            rays.slice(j).every((r) => !r.has(key(c))),
+        );
+        if (host >= 0) {
+          arrows[host].cells.unshift(c);
+        } else {
+          // Otherwise insert it as a single at a point in the placement order that is
+          // after every arrow whose ray crosses it and before any arrow in its own ray.
+          const after = rays.reduce((last, r, j) => (r.has(key(c)) ? j + 1 : last), 0);
+          const fit = DIRS.map((dir) => {
+            const ray = new Set(exitRay({ ...size, arrows: [] }, { id: 0, cells: [c], dir }).map(key));
+            const firstHit = arrows.findIndex((a) => a.cells.some((p) => ray.has(key(p))));
+            return { dir, ray, ok: firstHit < 0 || after <= firstHit };
+          }).find((f) => f.ok);
+          if (!fit) continue;
+          arrows.splice(after, 0, { id: 0, cells: [c], dir: fit.dir, region });
+          rays.splice(after, 0, fit.ray);
+        }
+        placed.add(key(c));
+        changed = true;
+      }
+    }
+  }
 }
 
 /**
@@ -131,9 +178,14 @@ function absorbSingles(size: { width: number; height: number }, arrows: Arrow[])
   return out.filter((_, i) => !gone.has(i)).map((a, i) => ({ ...a, id: i + 1 }));
 }
 
-/** Random walk backwards from the head; returns cells tail-to-head. */
+/**
+ * Walk backwards from the head; returns cells tail-to-head. Each step prefers the
+ * neighbour with the fewest free neighbours of its own (ties broken at random), so
+ * bodies hug edges and dead ends instead of stranding single cells.
+ */
 function growBody(h: Cell, dir: Dir, ray: Set<string>, free: (c: Cell) => boolean, rand: () => number): Cell[] {
-  const target = 2 + Math.floor(rand() * (MAX_LEN - 1));
+  // Biased towards long bodies: rand² is usually small.
+  const target = MAX_LEN - Math.floor(rand() ** 2 * (MAX_LEN - 1));
   const body = [h];
   const used = new Set([key(h)]);
   const ok = (c: Cell) => free(c) && !ray.has(key(c)) && !used.has(key(c));
@@ -142,9 +194,11 @@ function growBody(h: Cell, dir: Dir, ray: Set<string>, free: (c: Cell) => boolea
     body.unshift(next);
     used.add(key(next));
     const tail: Cell = next;
+    const exits = (c: Cell) => DIRS.filter((d) => ok({ x: c.x + STEP[d].x, y: c.y + STEP[d].y })).length;
     next = shuffle(DIRS, rand)
       .map((d) => ({ x: tail.x + STEP[d].x, y: tail.y + STEP[d].y }))
-      .find(ok);
+      .filter(ok)
+      .sort((p, q) => exits(p) - exits(q))[0];
   }
   return body;
 }

@@ -225,6 +225,8 @@ body {
 }
 
 .zoom-controls button {
+  /* No double-tap page zoom when tapping + quickly. */
+  touch-action: manipulation;
   min-width: 36px;
   min-height: 36px;
   border: 1px solid var(--muted);

@@ -203,6 +203,14 @@ describe('zoom buttons', () => {
     expect($('main svg.board').getAttribute('viewBox')).toBe(`-24 -24 ${(fish.width + 2) * CELL} ${(fish.height + 2) * CELL}`);
   });
 
+  test('Next level also starts at fit', () => {
+    startApp(root);
+    click('[data-action="zoom-in"]');
+    click('[data-action="next"]');
+    const fish = generate(LEVELS[1].mask, LEVELS[1].seed);
+    expect($('main svg.board').getAttribute('viewBox')).toBe(`-24 -24 ${(fish.width + 2) * CELL} ${(fish.height + 2) * CELL}`);
+  });
+
   test('after Restart the buttons act on the new board', () => {
     startApp(root);
     const fitWidth = width();
@@ -219,7 +227,10 @@ describe('zoom buttons', () => {
     Object.defineProperty(input, 'files', { value: [new File([''], 'pale.png')] });
     input.dispatchEvent(new Event('change', { bubbles: true }));
     await vi.waitFor(() => expect($('[data-action="play"]')).not.toBeNull());
+    click('[data-action="zoom-in"]');
     click('[data-action="play"]');
     expect(root.querySelector<SVGSVGElement>('main svg.board')!.dataset.bg).toBe('dark');
+    // Play from the editor starts at fit too.
+    expect($('main svg.board').getAttribute('viewBox')!.startsWith('-24 -24 ')).toBe(true);
   });
 });

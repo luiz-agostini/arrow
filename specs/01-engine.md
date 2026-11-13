@@ -1,6 +1,6 @@
 # 01-engine: Fast, dense boards at 64×80
 
-Status: ready
+Status: in-progress
 Depends on: 00-contracts
 Size: M
 
@@ -54,5 +54,11 @@ export function solve(b: Board): number[] | null;       // unchanged signature
 - `blockerOf` in `model.ts` rebuilds its owner map on every call. Don't call it in loops in `freeArrows`; build one map and reuse it.
 
 ## Implementation notes
+- [x] perf test (64×80 full and two-region masks under 1500 ms) — failed at ~2950 ms before the change
+- [x] `freeArrows`/`solve` with one owner map per state, updated incrementally (measured: generate 31 ms, solve 2934 ms before)
+- [x] `absorbSingles` index: skipped on purpose. Profiling showed `generate` takes 31 ms on a 64×80 mask, so the index adds risk without a measurable gain; behaviour 2 is left unimplemented
+- [ ] longer arrows: `MAX_LEN = 12`, biased target length; average-length test
+- [ ] regenerate snapshots (deliberate), full tests and build
+- [ ] review
 
 ## Result

@@ -146,7 +146,7 @@ export function pictureToLevel(
     const lums = cells.map((c) => c.lum);
     const flat = Math.max(...lums) - Math.min(...lums) < MIN_CONTRAST;
     const t = otsu(lums);
-    on = cells.map((c) => !flat && (c.lum <= t) !== opts.invert);
+    on = cells.map((c) => !flat && (Math.round(c.lum) <= t) !== opts.invert);
   }
 
   for (const g of groups(on, cols, rows, true)) if (g.length < MIN_GROUP) for (const i of g) on[i] = false;

@@ -64,6 +64,15 @@ describe('pictureToLevel', () => {
     expect(cells).toBe(36);
   });
 
+  test.each([
+    ['blue', [0, 0, 255, 255]],
+    ['green', [0, 128, 0, 255]],
+] as const)('a flat %s square on white keeps its shape', (_, colour) => {
+    const flat = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) ? [...colour] : WHITE));
+    expect(pictureToLevel(flat, { cols: 10, colors: 4, invert: false }).cells).toBe(36);
+    expect(pictureToLevel(flat, { cols: 10, colors: 4, invert: true }).cells).toBe(64);
+  });
+
   test('a plain picture has no shape', () => {
     const grey = paint(60, 60, () => [128, 128, 128, 255]);
     expect(pictureToLevel(grey, { cols: 12, colors: 4, invert: false }).cells).toBe(0);

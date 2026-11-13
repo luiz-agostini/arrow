@@ -88,3 +88,18 @@ export function fitContrast(color: string, bg: string, min = 3): string {
   }
   return luminance(bg) > 0.5 ? '#000000' : '#ffffff';
 }
+
+/** How much `vivid` multiplies saturation, and the power it raises lightness to (below 1 lifts darks). */
+const VIVID_SATURATION = 1.6;
+const VIVID_LIGHTNESS_POWER = 0.8;
+/** Colours this close to grey keep their saturation, so whites, greys and blacks stay neutral. */
+const VIVID_GREY = 0.08;
+
+/**
+ * Brightens a colour averaged from a photo: more saturated, with dark tones lifted, and
+ * the hue kept. Averaging a region's pixels mixes in its shading, which mutes colours.
+ */
+export function vivid(color: string): string {
+  const [h, s, l] = toHsl(parse(color));
+  return toHex(toRgb([h, s > VIVID_GREY ? Math.min(1, s * VIVID_SATURATION) : s, l ** VIVID_LIGHTNESS_POWER]));
+}

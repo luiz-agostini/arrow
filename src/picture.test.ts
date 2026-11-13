@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { vivid } from './colors';
 import { gridSize, MAX_ROWS, pictureToLevel } from './picture';
 import { BLACK, BLUE, paint, RED, WHITE, type Rgba } from './test-helpers';
 
@@ -65,7 +66,7 @@ describe('pictureToLevel', () => {
     expect(left.size).toBe(1);
     expect(right.size).toBe(1);
     expect([...left][0]).not.toBe([...right][0]);
-    expect(palette[Number([...left][0])]).toBe('#dc1e1e');
+    expect(palette[Number([...left][0])]).toBe(vivid('#dc1e1e'));
   });
 
   test('specks smaller than 3 cells are removed and pinholes filled', () => {
@@ -104,7 +105,7 @@ describe('pictureToLevel', () => {
     const lines = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) && x % 10 < 2 ? GREEN : [0, 0, 0, 255]));
     const { palette, cells } = pictureToLevel(lines, { cols: 10, colors: 4, invert: false });
     expect(cells).toBe(36);
-    expect(palette).toEqual(['#30c030']);
+    expect(palette).toEqual([vivid('#30c030')]);
   });
 
   test('light parts of a subject on a white background are kept', () => {

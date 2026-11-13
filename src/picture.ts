@@ -1,4 +1,4 @@
-import { contrastRatio, DARK_BG, LIGHT_BG, toLab } from './colors';
+import { contrastRatio, DARK_BG, LIGHT_BG, toLab, vivid } from './colors';
 
 export type Pixels = { width: number; height: number; data: Uint8ClampedArray };
 
@@ -305,7 +305,8 @@ export function pictureToLevel(
   const chars = new Array(cols * rows).fill('.');
   shape.forEach((i, j) => (chars[i] = String(labels[j])));
   const mask = Array.from({ length: rows }, (_, y) => chars.slice(y * cols, (y + 1) * cols).join(''));
-  const palette = centres.map(hex);
+  // Group means are muted by the photo's shading, so the palette is brightened afterwards.
+  const palette = centres.map((c) => vivid(hex(c)));
   return { mask, palette, cells: shape.length, background: backgroundFor(palette) };
 }
 

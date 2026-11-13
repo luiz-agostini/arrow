@@ -153,8 +153,8 @@ export const LEVELS: Level[] = [
   {
     name: 'Selfie',
     seed: 1,
-    palette: ['#d9cdd1', '#8f8794', '#bdb0b4', '#734f43', '#523d35', '#a0715e', '#806a62', '#67616e', '#36241f', '#cb957d'],
-    background: 'light',
+    palette: ['#e3d3d9', '#a09aa5', '#ccbbc0', '#9f5841', '#764a3a', '#bf7f65', '#9f796b', '#7b7484', '#572e22', '#e79f7f'],
+    background: 'dark',
     mask: [
       '.............64646......................',
       '............66444666....................',
@@ -190,8 +190,8 @@ export const LEVELS: Level[] = [
   {
     name: 'Thumbs Up',
     seed: 1,
-    palette: ['#2a221f', '#543d32', '#b1755a', '#cf906e', '#8b5b45', '#d8ba92', '#b99b7e', '#816752', '#8f7c6f', '#e3cbad'],
-    background: 'light',
+    palette: ['#433029', '#7b4b34', '#d3825d', '#ef9b6d', '#bf6439', '#f0c894', '#d3ab84', '#ab7951', '#a88e7c', '#f5d6af'],
+    background: 'dark',
     mask: [
       '...........10001........................',
       '..........7100011................017....',
@@ -229,8 +229,8 @@ export const LEVELS: Level[] = [
   {
     name: 'Smiles',
     seed: 1,
-    palette: ['#e6b190', '#26211c', '#866150', '#51443b', '#c58772', '#b38c6b', '#95847e', '#29b574', '#b8b4b9'],
-    background: 'light',
+    palette: ['#ffba8f', '#3e3226', '#b36c4c', '#715744', '#e39074', '#d19c70', '#ab948c', '#07ff8c', '#c4c1c5'],
+    background: 'dark',
     mask: [
       '.......................3333331..........',
       '......................1333331113........',
@@ -266,7 +266,7 @@ export const LEVELS: Level[] = [
   {
     name: 'Sunglasses',
     seed: 1,
-    palette: ['#4d4d5c', '#5a5a6c', '#373844', '#745756', '#956d65', '#816f70', '#74798a', '#cbc5d6', '#9fa0ad', '#ab9491'],
+    palette: ['#5a5a78', '#666689', '#444660', '#965f5d', '#b2796e', '#948384', '#838aa1', '#d3cbe2', '#afb0bb', '#bfa09c'],
     background: 'dark',
     mask: [
       '....................01111...............',
@@ -314,8 +314,8 @@ export const LEVELS: Level[] = [
   {
     name: 'Thinker',
     seed: 1,
-    palette: ['#a78d69', '#9a684c', '#c5a780', '#c08966', '#724932', '#7c664b', '#4d3829', '#cbb7a1', '#e7d1b5', '#291b14'],
-    background: 'light',
+    palette: ['#c4a170', '#c87446', '#e0b884', '#e19768', '#a75527', '#a77d49', '#764928', '#dec4a7', '#f8dbb6', '#482615'],
+    background: 'dark',
     mask: [
       '........................5595555.........',
       '.......................6669696665.......',
@@ -362,7 +362,7 @@ export const LEVELS: Level[] = [
   {
     name: 'Curious Pup',
     seed: 1,
-    palette: ['#61564e', '#7c7168', '#9b8e82', '#311e15', '#56361f', '#180f0c', '#4b3f38', '#7e5130', '#beb2a5', '#886d59'],
+    palette: ['#7f695a', '#978475', '#b19f8f', '#552813', '#8a4513', '#2f160e', '#6a5142', '#b9601f', '#cfc0ae', '#ad7e5c'],
     background: 'light',
     mask: [
       '.....................48030999699........',
@@ -435,7 +435,7 @@ export const LEVELS: Level[] = [
   {
     name: 'Specs',
     seed: 1,
-    palette: ['#131211', '#2c241e', '#4a3a2e', '#6a5343', '#ac7966', '#856050', '#daad8e', '#987662', '#c8957d', '#e8c7a6'],
+    palette: ['#201f1d', '#473426', '#6e4c32', '#926445', '#cb856c', '#b16b4c', '#f3b88f', '#b6866a', '#e4a080', '#fcd1a6'],
     background: 'light',
     mask: [
       '...............773727939................',
@@ -493,8 +493,8 @@ export const LEVELS: Level[] = [
   {
     name: 'Lounging Pup',
     seed: 1,
-    palette: ['#dcd9ce', '#c1b8a9', '#635c57', '#2c1d17', '#513929', '#948e87', '#8b5f3b', '#d79e68', '#96816d', '#cdad8f'],
-    background: 'light',
+    palette: ['#e6e2d4', '#d2c6b2', '#79716a', '#4b2719', '#7c4927', '#a5a09a', '#c5702a', '#f9ad65', '#b09478', '#e5ba93'],
+    background: 'dark',
     mask: [
       '...............2444444634......79.......',
       '............2444333444633.....6766......',
@@ -572,7 +572,7 @@ export const LEVELS: Level[] = [
   {
     name: 'Glasses',
     seed: 1,
-    palette: ['#272726', '#100f0e', '#38291f', '#5d493a', '#826857', '#a77d69', '#d9a88c', '#eac3a2', '#c58974', '#a2695c'],
+    palette: ['#393937', '#1c1a19', '#5a3821', '#845b3d', '#a97859', '#c48b70', '#f3b28d', '#ffcca2', '#e39276', '#c27462'],
     background: 'light',
     mask: [
       '............4434455.....................',
@@ -632,7 +632,7 @@ export const LEVELS: Level[] = [
   {
     name: 'Portrait',
     seed: 1,
-    palette: ['#32251c', '#4d3c2f', '#c2b7a4', '#1e150e', '#c0967a', '#9b745e', '#735a48', '#e2b99c', '#998977', '#dbd1c1'],
+    palette: ['#52341f', '#724e32', '#d4c5ac', '#39210f', '#dca47e', '#bb8464', '#9c6b48', '#f8c29c', '#b19c83', '#e8dbc6'],
     background: 'light',
     mask: [
       '................10001...................',
@@ -691,7 +691,7 @@ export const LEVELS: Level[] = [
   {
     name: 'Denim',
     seed: 1,
-    palette: ['#6982a3', '#201d22', '#cda381', '#334155', '#3e506e', '#433832', '#576070', '#936e54', '#a58d7c', '#ab5d6d'],
+    palette: ['#7193c0', '#312c34', '#e8b083', '#35527c', '#3b5f9b', '#61493c', '#607190', '#bc7e53', '#be9d86', '#cc6277'],
     background: 'light',
     mask: [
       '................55515.............',
@@ -779,8 +779,8 @@ export const LEVELS: Level[] = [
   {
     name: 'Red Dress',
     seed: 1,
-    palette: ['#6b1d29', '#993745', '#491018', '#ad7c66', '#c04047', '#c49a7e', '#7c393e', '#362d26', '#866151', '#ebaf81'],
-    background: 'light',
+    palette: ['#aa0720', '#da1f39', '#7e0012', '#cc896c', '#ea3c45', '#dfa782', '#b12d37', '#533f2f', '#b26c4e', '#ffbb86'],
+    background: 'dark',
     mask: [
       '..............7777........',
       '.............7777777......',
@@ -867,8 +867,8 @@ export const LEVELS: Level[] = [
   {
     name: 'Tongue Out',
     seed: 1,
-    palette: ['#242227', '#b77252', '#48382f', '#71533f', '#e0be9f', '#976e4f', '#dc986c', '#bf9b7f', '#522c27', '#974038'],
-    background: 'light',
+    palette: ['#35323a', '#dc7e52', '#6a4835', '#9e633b', '#f6c9a0', '#c37e4b', '#fea368', '#daa984', '#7f2d23', '#d73021'],
+    background: 'dark',
     mask: [
       '....................755557555...........',
       '..................767755775555..........',
@@ -938,8 +938,8 @@ export const LEVELS: Level[] = [
   {
     name: 'Jersey and Pup',
     seed: 1,
-    palette: ['#5c5155', '#897675', '#0f2560', '#b7a2a5', '#292b39', '#b9c6e8', '#2446a4', '#e2bb3b', '#3a4a6d', '#ad9452'],
-    background: 'light',
+    palette: ['#72656a', '#9b8a89', '#002997', '#c8adb1', '#323756', '#bacbf8', '#0040f1', '#ffd341', '#35559b', '#d0ae54'],
+    background: 'dark',
     mask: [
       '..........1108844444444444440000......',
       '..........1088444444444444444000......',
@@ -1026,7 +1026,7 @@ export const LEVELS: Level[] = [
   {
     name: 'Side by Side',
     seed: 1,
-    palette: ['#14151a', '#312f31', '#4a545a', '#ced5ec', '#d3ae97', '#ab8471', '#7a5a4c', '#787371'],
+    palette: ['#1d202d', '#444244', '#576b77', '#d0d9f7', '#eab99a', '#c79278', '#a4664b', '#8c8785'],
     background: 'light',
     mask: [
       '..............111..11111................',
@@ -1104,7 +1104,7 @@ export const LEVELS: Level[] = [
   {
     name: 'Video Call',
     seed: 1,
-    palette: ['#19181a', '#312e2d', '#4d443f', '#6b6057', '#a57b6a', '#825f50', '#8b7d6f', '#cfa38f', '#aba297', '#d9d2c7'],
+    palette: ['#282629', '#45413f', '#69574c', '#897462', '#c28972', '#ad6a4e', '#a4907c', '#e7ad92', '#beb2a3', '#e4dbcd'],
     background: 'light',
     mask: [
       '...................6636668..............',

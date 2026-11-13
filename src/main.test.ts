@@ -3,7 +3,7 @@ import { generate } from './generate';
 import { LEVELS } from './levels';
 import { startApp } from './main';
 import { blockerOf, exitRay } from './model';
-import { SPEED } from './render';
+import { CELL, SPEED } from './render';
 import { freeArrows, solve } from './solve';
 
 const level1 = generate(LEVELS[0].mask, LEVELS[0].seed);
@@ -12,10 +12,22 @@ let root: HTMLElement;
 const $ = (sel: string) => root.querySelector<HTMLElement>(sel)!;
 const text = (role: string) => $(`[data-role="${role}"]`).textContent;
 const click = (sel: string) => $(sel).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-const tapArrow = (id: number) => click(`path.hit[data-id="${id}"]`);
+// Taps go through pointer picking (decision 0007): press and release on the arrow's head
+// cell. getScreenCTM is stubbed below so one client pixel is one SVG unit.
+const tapArrow = (id: number) => {
+  const head = level1.arrows.find((a) => a.id === id)!.cells.at(-1)!;
+  const at = { clientX: (head.x + 0.5) * CELL, clientY: (head.y + 0.5) * CELL, pointerId: 1, bubbles: true };
+  const board = root.querySelector('main svg')!;
+  board.dispatchEvent(new PointerEvent('pointerdown', at));
+  board.dispatchEvent(new PointerEvent('pointerup', at));
+};
 const settle = () => vi.runAllTimersAsync();
 
 beforeEach(() => {
+  Object.defineProperty(SVGSVGElement.prototype, 'getScreenCTM', {
+    configurable: true,
+    value: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+  });
   vi.useFakeTimers({ toFake: ['setTimeout', 'requestAnimationFrame', 'performance'] });
   localStorage.clear();
   root = document.createElement('div');

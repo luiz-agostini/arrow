@@ -1,4 +1,5 @@
 import { DARK_BG, fitContrast, LIGHT_BG } from './colors';
+import { pickArrow } from './hit';
 import { exitRay, head, STEP, type Arrow, type Board, type Cell } from './model';
 import { CELL } from './viewport';
 
@@ -32,6 +33,20 @@ function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, 
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
   return node;
 }
+
+/** Pick radius in CSS pixels, by pointer kind. */
+const TOUCH_RADIUS = 22;
+const MOUSE_RADIUS = 6;
+/** A tap shorter and stiller than this is "quick". */
+const QUICK_MS = 300;
+const QUICK_MOVE = 8;
+/** A confirming tap must land this close (cells) to the first tap or the aimed arrow. */
+const CONFIRM = 0.5;
+const MAGNIFIER_SIZE = 120;
+const MAGNIFIER_ZOOM = 2.5;
+const MAGNIFIER_LIFT = 80;
+
+const magnifiers = new WeakMap<SVGSVGElement, SVGSVGElement>();
 
 const toD = (pts: Cell[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ');
 
@@ -98,10 +113,7 @@ export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => 
     drawn.set(a.id, d);
     content.append(d.group);
   }
-  svg.onclick = (e) => {
-    const id = (e.target as Element).closest('[data-id]')?.getAttribute('data-id');
-    if (id) onTap(Number(id));
-  };
+  attachInput(svg, b, content.id, drawn, onTap, opts.toCell);
 
   return {
     slideOut(id) {
@@ -147,4 +159,117 @@ export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => 
     zoom() {},
     fit() {},
   };
+}
+
+type Point = { x: number; y: number };
+
+/**
+ * Pointer input (decision 0007): a press aims at the nearest arrow, moving re-aims,
+ * releasing commits, and leaving the board cancels. An ambiguous quick tap only aims
+ * and waits for a confirming tap. Two pointers never tap. Touch presses show a magnifier.
+ */
+function attachInput(
+  svg: SVGSVGElement,
+  b: Board,
+  contentId: string,
+  drawn: Map<number, Drawn>,
+  onTap: (id: number) => void,
+  toCellOpt?: (clientX: number, clientY: number) => Point,
+): void {
+  svg.onclick = null;
+  const toCell =
+    toCellOpt ??
+    ((cx: number, cy: number): Point => {
+      const m = svg.getScreenCTM?.();
+      return m ? { x: (cx - m.e) / m.a / CELL, y: (cy - m.f) / m.d / CELL } : { x: NaN, y: NaN };
+    });
+  const cellsPerPx = (cx: number, cy: number) => Math.abs(toCell(cx + 1, cy).x - toCell(cx, cy).x);
+  const onBoard = (p: Point) => p.x >= 0 && p.y >= 0 && p.x < b.width && p.y < b.height;
+  const live = (): Board => ({ ...b, arrows: b.arrows.filter((a) => drawn.has(a.id) && !drawn.get(a.id)!.group.classList.contains('leaving')) });
+  const pick = (e: PointerEvent) => {
+    const p = toCell(e.clientX, e.clientY);
+    if (!onBoard(p)) return null;
+    const radius = (e.pointerType === 'touch' ? TOUCH_RADIUS : MOUSE_RADIUS) * cellsPerPx(e.clientX, e.clientY);
+    return pickArrow(live(), p, radius);
+  };
+  const aim = (id: number | null) => {
+    for (const d of drawn.values()) d.group.classList.toggle('aim', d.group.dataset.id === String(id));
+  };
+
+  magnifiers.get(svg)?.remove();
+  const magnifier = el('svg', { class: 'magnifier', hidden: '' });
+  const lens = el('use', { href: `#${contentId}` });
+  magnifier.append(lens);
+  (svg.parentElement ?? document.body).append(magnifier);
+  magnifiers.set(svg, magnifier);
+  const showMagnifier = (e: PointerEvent) => {
+    const c = toCell(e.clientX, e.clientY);
+    const size = (MAGNIFIER_SIZE * cellsPerPx(e.clientX, e.clientY)) / MAGNIFIER_ZOOM;
+    magnifier.setAttribute('viewBox', [(c.x - size / 2) * CELL, (c.y - size / 2) * CELL, size * CELL, size * CELL].join(' '));
+    magnifier.style.left = `${e.clientX - MAGNIFIER_SIZE / 2}px`;
+    magnifier.style.top = `${e.clientY - MAGNIFIER_LIFT - MAGNIFIER_SIZE / 2}px`;
+    magnifier.removeAttribute('hidden');
+  };
+  const hideMagnifier = () => magnifier.setAttribute('hidden', '');
+
+  const pointers = new Map<number, Point>();
+  let press: { id: number | null; start: number; x: number; y: number; touch: boolean } | null = null;
+  let pending: { id: number; at: Point } | null = null;
+
+  svg.onpointerdown = (e) => {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size > 1) {
+      // A second finger means a gesture, never a tap.
+      press = null;
+      aim(null);
+      hideMagnifier();
+      return;
+    }
+    svg.setPointerCapture?.(e.pointerId);
+    const picked = pick(e);
+    press = { id: picked?.id ?? null, start: performance.now(), x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch' };
+    aim(press.id ?? pending?.id ?? null);
+    if (press.touch) showMagnifier(e);
+  };
+
+  svg.onpointermove = (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!press) return;
+    press.id = pick(e)?.id ?? null;
+    aim(press.id);
+    if (press.touch) showMagnifier(e);
+  };
+
+  const release = (e: PointerEvent, commit: boolean) => {
+    pointers.delete(e.pointerId);
+    hideMagnifier();
+    const done = press;
+    press = null;
+    if (!done || !commit) return aim(pending?.id ?? null);
+    const at = toCell(e.clientX, e.clientY);
+    const quick = performance.now() - done.start < QUICK_MS && Math.hypot(e.clientX - done.x, e.clientY - done.y) < QUICK_MOVE;
+    if (quick && pending && onBoard(at)) {
+      const target = live().arrows.find((a) => a.id === pending!.id);
+      const nearPoint = Math.hypot(at.x - pending.at.x, at.y - pending.at.y) <= CONFIRM;
+      const nearArrow = target !== undefined && pickArrow({ ...b, arrows: [target] }, at, CONFIRM) !== null;
+      if (nearPoint || nearArrow) {
+        const id = pending.id;
+        pending = null;
+        aim(null);
+        return onTap(id);
+      }
+    }
+    pending = null;
+    if (done.id === null) return aim(null);
+    const picked = pick(e);
+    if (quick && picked?.ambiguous) {
+      pending = { id: picked.id, at };
+      return aim(picked.id);
+    }
+    aim(null);
+    onTap(done.id);
+  };
+  svg.onpointerup = (e) => release(e, true);
+  svg.onpointercancel = (e) => release(e, false);
 }

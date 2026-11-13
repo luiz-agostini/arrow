@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Board } from './model';
 import { DARK_BG, fitContrast, LIGHT_BG } from './colors';
 import { mountBoard } from './render';
@@ -14,6 +14,12 @@ const board: Board = {
 };
 
 let svg: SVGSVGElement;
+// One client pixel per cell keeps the arithmetic readable.
+const toCell = (x: number, y: number) => ({ x, y });
+function pointer(type: string, x: number, y: number, init: PointerEventInit = {}) {
+  svg.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', ...init }));
+}
+const aimed = () => [...svg.querySelectorAll('g.arrow.aim')].map((g) => Number(g.getAttribute('data-id')));
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'requestAnimationFrame', 'performance'] });
@@ -24,6 +30,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   svg.remove();
+  document.querySelectorAll('svg.magnifier').forEach((m) => m.remove());
 });
 
 test('draws a body, head and hit area per arrow', () => {
@@ -39,11 +46,11 @@ test('remounting replaces the previous board', () => {
   expect(svg.querySelectorAll('path.body')).toHaveLength(2);
 });
 
-test('clicking an arrow reports its id', () => {
+test('clicking a hit path does nothing: taps go through pointer picking (decision 0007)', () => {
   const onTap = vi.fn();
-  mountBoard(svg, board, onTap);
+  mountBoard(svg, board, onTap, { toCell });
   svg.querySelector<SVGPathElement>('path.hit[data-id="1"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  expect(onTap).toHaveBeenCalledWith(1);
+  expect(onTap).not.toHaveBeenCalled();
 });
 
 test('flashBlocked marks both arrows for 400 ms', () => {
@@ -139,4 +146,101 @@ test('arrows are drawn thick, with heads 0.32 cell wide on each side', () => {
   mountBoard(svg, { width: 3, height: 3, arrows: [{ id: 1, cells: [{ x: 0, y: 1 }, { x: 1, y: 1 }], dir: 'R' }] }, () => {});
   const ys = svg.querySelector('polygon.head')!.getAttribute('points')!.split(' ').map((p) => Number(p.split(',')[1]));
   expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(2 * 0.32 * 24, 6);
+});
+
+describe('pointer taps', () => {
+  test('pressing previews the arrow and releasing commits it', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 1.5, 2.5);
+    expect(aimed()).toEqual([1]);
+    expect(onTap).not.toHaveBeenCalled();
+    pointer('pointerup', 1.5, 2.5);
+    expect(onTap).toHaveBeenCalledTimes(1);
+    expect(onTap).toHaveBeenCalledWith(1);
+    expect(aimed()).toEqual([]);
+  });
+
+  test('the preview follows the pointer and the arrow under it on release is the one moved', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 1.5, 2.5);
+    pointer('pointermove', 3.5, 0.5);
+    expect(aimed()).toEqual([2]);
+    pointer('pointerup', 3.5, 0.5);
+    expect(onTap).toHaveBeenCalledWith(2);
+  });
+
+  test('dragging off the board cancels, even if released there', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 1.5, 2.5);
+    pointer('pointermove', -3, -3);
+    expect(aimed()).toEqual([]);
+    pointer('pointerup', -3, -3);
+    expect(onTap).not.toHaveBeenCalled();
+  });
+
+  test('an ambiguous quick tap only aims; a second quick tap there confirms', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 2.6, 2.5);
+    vi.advanceTimersByTime(100);
+    pointer('pointerup', 2.6, 2.5);
+    expect(onTap).not.toHaveBeenCalled();
+    expect(aimed()).toEqual([2]);
+    pointer('pointerdown', 2.6, 2.5);
+    vi.advanceTimersByTime(100);
+    pointer('pointerup', 2.6, 2.5);
+    expect(onTap).toHaveBeenCalledTimes(1);
+    expect(onTap).toHaveBeenCalledWith(2);
+  });
+
+  test('a deliberate press on an ambiguous spot commits the nearest arrow', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 2.6, 2.5);
+    vi.advanceTimersByTime(500);
+    pointer('pointerup', 2.6, 2.5);
+    expect(onTap).toHaveBeenCalledWith(2);
+  });
+
+  test('a second finger cancels the aim and two-finger gestures never tap', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+    vi.advanceTimersByTime(50);
+    pointer('pointerdown', 3.5, 0.5, { pointerId: 2, pointerType: 'touch' });
+    expect(aimed()).toEqual([]);
+    pointer('pointermove', 3.0, 0.5, { pointerId: 2, pointerType: 'touch' });
+    pointer('pointerup', 1.5, 2.5, { pointerType: 'touch' });
+    pointer('pointerup', 3.0, 0.5, { pointerId: 2, pointerType: 'touch' });
+    expect(onTap).not.toHaveBeenCalled();
+  });
+
+  test('a touch press shows a magnifier that reuses the board through one <use>', () => {
+    mountBoard(svg, board, () => {}, { toCell });
+    pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+    const magnifier = document.querySelector<SVGSVGElement>('svg.magnifier')!;
+    expect(magnifier.hasAttribute('hidden')).toBe(false);
+    expect(magnifier.querySelectorAll('use')).toHaveLength(1);
+    expect(magnifier.querySelectorAll('g.arrow')).toHaveLength(0);
+    pointer('pointerup', 1.5, 2.5, { pointerType: 'touch' });
+    expect(magnifier.hasAttribute('hidden')).toBe(true);
+  });
+
+  test('a mouse press shows no magnifier', () => {
+    mountBoard(svg, board, () => {}, { toCell });
+    pointer('pointerdown', 1.5, 2.5);
+    expect(document.querySelector('svg.magnifier:not([hidden])')).toBeNull();
+  });
+
+  test('an arrow that is sliding out cannot be picked', () => {
+    const onTap = vi.fn();
+    const view = mountBoard(svg, board, onTap, { toCell });
+    void view.slideOut(1);
+    pointer('pointerdown', 1.5, 2.5);
+    pointer('pointerup', 1.5, 2.5);
+    expect(onTap).not.toHaveBeenCalledWith(1);
+  });
 });

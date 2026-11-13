@@ -317,6 +317,38 @@ svg[data-bg='dark'] .backdrop {
   pointer-events: none;
 }
 
+/* The arrow a press is aiming at: thicker and brighter, so it reads without colour. */
+.arrow.aim .body {
+  stroke: var(--hover);
+  stroke-width: 8;
+}
+
+.arrow.aim .head {
+  fill: var(--hover);
+}
+
+/* Loupe shown above a finger during a touch press. */
+.magnifier {
+  position: fixed;
+  z-index: 10;
+  width: 120px;
+  height: 120px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
+  clip-path: circle(50%);
+  pointer-events: none;
+}
+
+.magnifier[hidden] {
+  display: none;
+}
+
+.board {
+  touch-action: none;
+}
+
 .arrow.hint .body {
   stroke: var(--good);
   animation: pulse 900ms ease-in-out infinite;

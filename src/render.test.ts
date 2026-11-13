@@ -244,3 +244,52 @@ describe('pointer taps', () => {
     expect(onTap).not.toHaveBeenCalledWith(1);
   });
 });
+
+describe('zoom', () => {
+  const box = () => svg.getAttribute('viewBox')!.split(' ').map(Number);
+
+  test('zoom(2) halves the visible width and fit() restores the whole board', () => {
+    const view = mountBoard(svg, board, () => {}, { toCell });
+    expect(svg.getAttribute('viewBox')).toBe('-24 -24 168 168');
+    view.zoom(2);
+    expect(box()[2]).toBe(84);
+    view.zoom(1 / 1.5);
+    expect(box()[2]).toBeCloseTo(126, 6);
+    view.fit();
+    expect(svg.getAttribute('viewBox')).toBe('-24 -24 168 168');
+  });
+
+  test('the wheel zooms around the cell under the cursor', () => {
+    mountBoard(svg, board, () => {}, { toCell });
+    const before = box();
+    svg.dispatchEvent(new WheelEvent('wheel', { deltaY: -462, clientX: 1.5, clientY: 2.5, bubbles: true, cancelable: true }));
+    const after = box();
+    expect(after[2]).toBeCloseTo(before[2] / 2, 0);
+    // The cursor's cell keeps its relative position in the window.
+    expect((1.5 * 24 - after[0]) / after[2]).toBeCloseTo((1.5 * 24 - before[0]) / before[2], 6);
+    expect((2.5 * 24 - after[1]) / after[3]).toBeCloseTo((2.5 * 24 - before[1]) / before[3], 6);
+  });
+
+  test('spreading two fingers zooms in', () => {
+    mountBoard(svg, board, () => {}, { toCell });
+    pointer('pointerdown', 1, 2, { pointerType: 'touch' });
+    pointer('pointerdown', 3, 2, { pointerId: 2, pointerType: 'touch' });
+    pointer('pointermove', 4, 2, { pointerId: 2, pointerType: 'touch' });
+    expect(box()[2]).toBeCloseTo(168 / 1.5, 6);
+  });
+});
+
+test('the magnifier lives outside the board container and only after a touch press', () => {
+  const stage = document.createElement('main');
+  document.body.append(stage);
+  stage.append(svg);
+  mountBoard(svg, board, () => {}, { toCell });
+  expect(document.querySelector('svg.magnifier')).toBeNull();
+  pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+  pointer('pointerup', 1.5, 2.5, { pointerType: 'touch' });
+  expect(stage.querySelectorAll('svg')).toHaveLength(1);
+  expect(document.querySelectorAll('svg.magnifier')).toHaveLength(1);
+  mountBoard(svg, board, () => {}, { toCell });
+  expect(document.querySelectorAll('svg.magnifier')).toHaveLength(0);
+  stage.remove();
+});

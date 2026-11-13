@@ -1,7 +1,7 @@
 import { DARK_BG, fitContrast, LIGHT_BG } from './colors';
 import { pickArrow } from './hit';
 import { exitRay, head, STEP, type Arrow, type Board, type Cell } from './model';
-import { CELL } from './viewport';
+import { CELL, fit, pan, viewBox, zoomAt, type View } from './viewport';
 
 export { CELL } from './viewport';
 export const SPEED = 30; // cells per second
@@ -45,6 +45,8 @@ const CONFIRM = 0.5;
 const MAGNIFIER_SIZE = 120;
 const MAGNIFIER_ZOOM = 2.5;
 const MAGNIFIER_LIFT = 80;
+/** Wheel zoom factor per unit of deltaY. */
+const WHEEL_BASE = 1.0015;
 
 const magnifiers = new WeakMap<SVGSVGElement, SVGSVGElement>();
 
@@ -90,7 +92,15 @@ let boards = 0;
 export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => void, opts: BoardOptions = {}): BoardView {
   const { palette, background } = opts;
   svg.replaceChildren();
-  svg.setAttribute('viewBox', `${-CELL} ${-CELL} ${(b.width + 2) * CELL} ${(b.height + 2) * CELL}`);
+  let view = fit();
+  const camera = {
+    get: () => view,
+    set: (v: View) => {
+      view = v;
+      svg.setAttribute('viewBox', viewBox(view, b));
+    },
+  };
+  camera.set(view);
   // A level's own background is drawn as a backdrop; arrows are then fitted to it alone.
   if (background) svg.dataset.bg = background;
   else delete svg.dataset.bg;
@@ -113,7 +123,7 @@ export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => 
     drawn.set(a.id, d);
     content.append(d.group);
   }
-  attachInput(svg, b, content.id, drawn, onTap, opts.toCell);
+  attachInput(svg, b, content.id, drawn, onTap, camera, opts.toCell);
 
   return {
     slideOut(id) {
@@ -156,8 +166,13 @@ export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => 
       for (const d of drawn.values()) d.group.classList.remove('hint');
       drawn.get(id)?.group.classList.add('hint');
     },
-    zoom() {},
-    fit() {},
+    zoom(factor) {
+      const span = { w: (b.width + 2) / view.scale, h: (b.height + 2) / view.scale };
+      camera.set(zoomAt(view, factor, { x: view.x + span.w / 2, y: view.y + span.h / 2 }, b));
+    },
+    fit() {
+      camera.set(fit());
+    },
   };
 }
 
@@ -174,6 +189,7 @@ function attachInput(
   contentId: string,
   drawn: Map<number, Drawn>,
   onTap: (id: number) => void,
+  camera: { get: () => View; set: (v: View) => void },
   toCellOpt?: (clientX: number, clientY: number) => Point,
 ): void {
   svg.onclick = null;
@@ -196,13 +212,22 @@ function attachInput(
     for (const d of drawn.values()) d.group.classList.toggle('aim', d.group.dataset.id === String(id));
   };
 
+  // The loupe lives in <body> (it is position: fixed) and is only created on the first
+  // touch press, so boards nobody touches, like the editor preview, never get one.
   magnifiers.get(svg)?.remove();
-  const magnifier = el('svg', { class: 'magnifier', hidden: '' });
-  const lens = el('use', { href: `#${contentId}` });
-  magnifier.append(lens);
-  (svg.parentElement ?? document.body).append(magnifier);
-  magnifiers.set(svg, magnifier);
+  magnifiers.delete(svg);
+  const lens = () => {
+    let m = magnifiers.get(svg);
+    if (!m) {
+      m = el('svg', { class: 'magnifier', hidden: '' });
+      m.append(el('use', { href: `#${contentId}` }));
+      document.body.append(m);
+      magnifiers.set(svg, m);
+    }
+    return m;
+  };
   const showMagnifier = (e: PointerEvent) => {
+    const magnifier = lens();
     const c = toCell(e.clientX, e.clientY);
     const size = (MAGNIFIER_SIZE * cellsPerPx(e.clientX, e.clientY)) / MAGNIFIER_ZOOM;
     magnifier.setAttribute('viewBox', [(c.x - size / 2) * CELL, (c.y - size / 2) * CELL, size * CELL, size * CELL].join(' '));
@@ -210,9 +235,20 @@ function attachInput(
     magnifier.style.top = `${e.clientY - MAGNIFIER_LIFT - MAGNIFIER_SIZE / 2}px`;
     magnifier.removeAttribute('hidden');
   };
-  const hideMagnifier = () => magnifier.setAttribute('hidden', '');
+  const hideMagnifier = () => magnifiers.get(svg)?.setAttribute('hidden', '');
+
+  svg.onwheel = (e) => {
+    e.preventDefault();
+    camera.set(zoomAt(camera.get(), WHEEL_BASE ** -e.deltaY, toCell(e.clientX, e.clientY), b));
+  };
 
   const pointers = new Map<number, Point>();
+  // Two fingers: their spread zooms around their midpoint, and moving them pans.
+  let pinch: { dist: number; mid: Point } | null = null;
+  const twoFingers = () => {
+    const [p, q] = [...pointers.values()];
+    return { dist: Math.hypot(p.x - q.x, p.y - q.y), mid: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 } };
+  };
   let press: { id: number | null; start: number; x: number; y: number; touch: boolean } | null = null;
   let pending: { id: number; at: Point } | null = null;
 
@@ -223,6 +259,7 @@ function attachInput(
       press = null;
       aim(null);
       hideMagnifier();
+      if (pointers.size === 2) pinch = twoFingers();
       return;
     }
     svg.setPointerCapture?.(e.pointerId);
@@ -235,6 +272,16 @@ function attachInput(
   svg.onpointermove = (e) => {
     if (!pointers.has(e.pointerId)) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && pointers.size === 2) {
+      const now = twoFingers();
+      const perPx = cellsPerPx(now.mid.x, now.mid.y);
+      let v = camera.get();
+      if (pinch.dist > 0) v = zoomAt(v, now.dist / pinch.dist, toCell(pinch.mid.x, pinch.mid.y), b);
+      v = pan(v, -(now.mid.x - pinch.mid.x) * perPx, -(now.mid.y - pinch.mid.y) * perPx, b);
+      camera.set(v);
+      pinch = now;
+      return;
+    }
     if (!press) return;
     press.id = pick(e)?.id ?? null;
     aim(press.id);
@@ -243,6 +290,7 @@ function attachInput(
 
   const release = (e: PointerEvent, commit: boolean) => {
     pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinch = null;
     hideMagnifier();
     const done = press;
     press = null;

@@ -102,8 +102,11 @@ export function viewBox(v: View, board: { width: number; height: number }): stri
   - Outside the spec's files: `editor.test.ts` (owned by 04) now expects `--arrow-c` on preview arrows, because the editor already passes `background`; the post-Play check stays `--arrow-light` until 04 puts `background` on the level.
 - [x] render: pointer press / preview / release, ambiguous quick tap, drag-off cancel, hit-path clicks inert. Arrows that are sliding out can't be picked; a deliberate (non-quick) press on an ambiguous spot commits the nearest arrow.
 - [x] render: two pointers never tap; magnifier with one `<use>` of `g.board-content`, positioned fixed above the finger, touch only. `.board` uses `touch-action: none` so the browser doesn't scroll or zoom the page during gestures.
-- [ ] render: zoom/fit via viewport, wheel zoom
-- [ ] full tests, build, review
+- [x] render: zoom/fit via viewport, wheel zoom, two-finger pinch (zoom by spread around the midpoint, pan by midpoint movement)
+- [x] magnifier moved to `<body>` and created lazily on the first touch press, so `main svg` stays the board and untouched boards (the editor preview) never get one. The test for this was written right after the change rather than before it.
+- [x] checked in Chrome: a real mouse click on a free arrow commits through `getScreenCTM`; the wheel zooms around the cursor; a touch press (390×844, touch emulation) aims and shows the magnifier; no page errors
+- [x] full tests (234), build
+- [ ] review
 
 Interpretations of the spec:
 - **Screen to cell:** without `opts.toCell`, render uses `svg.getScreenCTM()` (scale and offset terms `a`, `d`, `e`, `f`; no rotation). The pick radius in cells is the pixel radius times the cells-per-pixel ratio measured from the same mapping, so a stubbed `toCell` gets a consistent radius.

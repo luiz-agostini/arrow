@@ -1,21 +1,25 @@
-import { contrastRatio, DARK_BG, LIGHT_BG } from './colors';
+import { contrastRatio, DARK_BG, LIGHT_BG, toLab } from './colors';
 
 export type Pixels = { width: number; height: number; data: Uint8ClampedArray };
 
 export const MAX_ROWS = 80;
-/** Colour count used for `colors: 'auto'` until real Auto selection lands. */
-const AUTO_COLORS = 4;
+/** Most colours a picture gets; `colors: 'auto'` grows up to this. */
+const MAX_COLORS = 10;
+/** A new colour group is only seeded this far (ΔE, Lab) from every existing one. */
+const AUTO_MIN_DE = 12;
+/** A small group survives when it is at least this far (ΔE) from its nearest group. */
+const DETAIL_DE = 25;
 const OPAQUE = 128;
 const TRANSPARENT_SHARE = 0.01;
 const MIN_CONTRAST = 16;
 const MIN_GROUP = 3;
 const KMEANS_ROUNDS = 10;
-/** Colours closer than this (RGB distance) are not seeded as separate groups. */
-const MIN_COLOUR_DIST = 48;
 /** A pixel this far (RGB distance) from the background colour belongs to the shape. */
 const BG_DISTANCE = 32;
-/** Colour groups smaller than this share of the shape (or 3 cells) merge into their nearest group. */
-const MIN_GROUP_SHARE = 0.05;
+/** Colour groups smaller than this share of the shape (or 2 cells) merge unless they're a detail. */
+const MIN_GROUP_SHARE = 0.02;
+/** An edge cell this close (RGB) to the background→neighbour line is an anti-aliasing blend. */
+const BLEND_OFF = 16;
 /** Share of border pixels that must match the background colour for it to count as plain. */
 const PLAIN_BORDER_SHARE = 0.55;
 
@@ -114,49 +118,57 @@ const dist2 = (a: Rgb, b: Rgb) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2
 const hex = (rgb: Rgb) => '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
 
 /**
- * k-means over shape-cell colours, seeded by farthest-point picks so it needs no RNG.
- * Returns a cluster index per colour and the centres, largest cluster first.
+ * k-means in Lab over shape-cell colours, seeded by farthest-point picks so it needs
+ * no RNG. Seeding stops at `k` groups or when the farthest colour is within
+ * AUTO_MIN_DE of every group. Groups that don't survive merge into their nearest.
+ * Returns a group index per colour and each group's mean RGB, largest group first.
  */
 function quantize(colours: Rgb[], k: number): { labels: number[]; centres: Rgb[] } {
-  const distinct = new Set(colours.map(hex)).size;
-  let centres: Rgb[] = [colours[0]];
-  while (centres.length < Math.min(k, distinct)) {
-    let far = colours[0];
+  const labs = colours.map(toLab);
+  const meanOf = (vs: Rgb[]) => [0, 1, 2].map((ch) => vs.reduce((s, v) => s + v[ch], 0) / vs.length) as Rgb;
+  let centres: Rgb[] = [labs[0]];
+  while (centres.length < k) {
+    let far = labs[0];
     let farD = -1;
-    for (const c of colours) {
+    for (const c of labs) {
       const d = Math.min(...centres.map((m) => dist2(c, m)));
       if (d > farD) [far, farD] = [c, d];
     }
-    if (farD < MIN_COLOUR_DIST ** 2) break;
+    if (farD < AUTO_MIN_DE ** 2) break;
     centres.push(far);
   }
+  const nearest = (c: Rgb) => centres.reduce((bi, m, i) => (dist2(c, m) < dist2(c, centres[bi]) ? i : bi), 0);
   let labels: number[] = [];
   for (let round = 0; round < KMEANS_ROUNDS; round++) {
-    labels = colours.map((c) => centres.reduce((bi, m, i) => (dist2(c, m) < dist2(c, centres[bi]) ? i : bi), 0));
+    labels = labs.map(nearest);
     centres = centres.map((m, i) => {
-      const members = colours.filter((_, j) => labels[j] === i);
-      if (!members.length) return m;
-      return [0, 1, 2].map((ch) => members.reduce((s, c) => s + c[ch], 0) / members.length) as Rgb;
+      const members = labs.filter((_, j) => labels[j] === i);
+      return members.length ? meanOf(members) : m;
     });
   }
-  // Merge tiny groups, smallest first, so stray edge cells don't get a colour of their own.
-  const minSize = Math.max(MIN_GROUP, MIN_GROUP_SHARE * colours.length);
+  // A group survives when it is big enough, or small but clearly distinct (a detail
+  // like eyes or glasses). Others merge into their nearest group, smallest first.
+  const minSize = Math.max(2, MIN_GROUP_SHARE * colours.length);
   for (;;) {
     const sizes = centres.map((_, i) => labels.filter((l) => l === i).length);
     const live = sizes.flatMap((n, i) => (n > 0 ? [i] : []));
-    const small = live.filter((i) => sizes[i] < minSize).sort((a, b) => sizes[a] - sizes[b] || a - b)[0];
-    if (live.length < 2 || small === undefined) break;
-    const into = live.filter((i) => i !== small).reduce((bi, i) => (dist2(centres[small], centres[i]) < dist2(centres[small], centres[bi]) ? i : bi));
-    labels = labels.map((l) => (l === small ? into : l));
-    const members = colours.filter((_, j) => labels[j] === into);
-    centres[into] = [0, 1, 2].map((ch) => members.reduce((s, c) => s + c[ch], 0) / members.length) as Rgb;
+    const nearestOther = (i: number) => live.filter((o) => o !== i).reduce((bi, o) => (dist2(centres[i], centres[o]) < dist2(centres[i], centres[bi]) ? o : bi));
+    const survives = (i: number) => sizes[i] >= minSize || (sizes[i] >= 2 && dist2(centres[i], centres[nearestOther(i)]) >= DETAIL_DE ** 2);
+    const doomed = live.filter((i) => !survives(i)).sort((a, b) => sizes[a] - sizes[b] || a - b)[0];
+    if (live.length < 2 || doomed === undefined) break;
+    const into = nearestOther(doomed);
+    labels = labels.map((l) => (l === doomed ? into : l));
+    centres[into] = meanOf(labs.filter((_, j) => labels[j] === into));
   }
   const order = centres
     .map((_, i) => ({ i, n: labels.filter((l) => l === i).length }))
     .filter((c) => c.n > 0)
     .sort((a, b) => b.n - a.n || a.i - b.i);
   const rank = new Map(order.map((c, r) => [c.i, r]));
-  return { labels: labels.map((l) => rank.get(l)!), centres: order.map((c) => centres[c.i]) };
+  return {
+    labels: labels.map((l) => rank.get(l)!),
+    centres: order.map((c) => meanOf(colours.filter((_, j) => labels[j] === c.i))),
+  };
 }
 
 /**
@@ -232,12 +244,34 @@ export function pictureToLevel(
     return meanColour(p, cols, rows, i, (px) => isShape(px) && dist2(rgbAt(px), bg) >= farthest / 4);
   };
   const own = new Map<number, Rgb | null>(shape.map((i) => [i, ownColour(i)]));
+  const neighbours = (i: number) =>
+    [i % cols > 0 ? i - 1 : -1, i % cols < cols - 1 ? i + 1 : -1, i - cols, i + cols].filter((n) => n >= 0 && n < on.length);
+  // A cell on the shape's edge whose colour is a blend of the background and a
+  // neighbouring shape colour is anti-aliasing; it takes that neighbour's colour.
+  const blendOf = (i: number, c: Rgb): Rgb | null => {
+    if (!bg || opts.invert || neighbours(i).every((n) => on[n]) && neighbours(i).length === 4) return null;
+    for (const n of neighbours(i)) {
+      const cn = own.get(n);
+      if (!on[n] || !cn) continue;
+      const along = [0, 1, 2].map((ch) => cn[ch] - bg[ch]);
+      const len2 = along.reduce((s, v) => s + v * v, 0);
+      if (len2 === 0) continue;
+      const t = [0, 1, 2].reduce((s, ch) => s + (c[ch] - bg[ch]) * along[ch], 0) / len2;
+      if (t <= 0 || t >= 1) continue;
+      const off = dist2(c, [0, 1, 2].map((ch) => bg[ch] + t * along[ch]) as Rgb);
+      if (off <= BLEND_OFF ** 2) return cn;
+    }
+    return null;
+  };
   // A filled pinhole has no shape pixels; it borrows a neighbour's colour.
-  const colourOf = (i: number): Rgb =>
-    own.get(i) ?? [i - 1, i + 1, i - cols, i + cols].map((n) => own.get(n)).find((c) => c) ?? cells[i].rgb;
+  const colourOf = (i: number): Rgb => {
+    const c = own.get(i);
+    if (c) return blendOf(i, c) ?? c;
+    return neighbours(i).map((n) => own.get(n)).find((v) => v) ?? cells[i].rgb;
+  };
   const { labels, centres } = quantize(
     shape.map(colourOf),
-    opts.colors === 'auto' ? AUTO_COLORS : opts.colors,
+    opts.colors === 'auto' ? MAX_COLORS : Math.min(opts.colors, MAX_COLORS),
   );
   const chars = new Array(cols * rows).fill('.');
   shape.forEach((i, j) => (chars[i] = String(labels[j])));
@@ -246,8 +280,8 @@ export function pictureToLevel(
   return { mask, palette, cells: shape.length, background: backgroundFor(palette) };
 }
 
-/** 'dark' when the palette's mean contrast against the light board is lower than against the dark one. */
+/** The board on which the palette's least visible colour stands out most; ties go to 'light'. */
 function backgroundFor(palette: string[]): 'light' | 'dark' {
-  const mean = (bg: string) => palette.reduce((s, c) => s + contrastRatio(c, bg), 0) / palette.length;
-  return mean(LIGHT_BG) < mean(DARK_BG) ? 'dark' : 'light';
+  const worst = (bg: string) => Math.min(...palette.map((c) => contrastRatio(c, bg)));
+  return worst(LIGHT_BG) >= worst(DARK_BG) ? 'light' : 'dark';
 }

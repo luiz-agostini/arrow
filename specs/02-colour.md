@@ -1,6 +1,6 @@
 # 02-colour: Picture colours that match the photo
 
-Status: ready
+Status: in-progress
 Depends on: 00-contracts
 Size: M
 
@@ -64,5 +64,14 @@ export function pictureToLevel(
 - The existing `quantize` in `src/picture.ts` is the place to change; keep `shapeSide` and the background detection as they are.
 
 ## Implementation notes
+- [x] failing tests for every acceptance criterion and review-focus item (the detail and 10-cap tests failed before; the background, determinism and tiny-shape tests already passed, so they pin)
+- [x] Lab clustering, seeding stops below ΔE 12, cap 10 for 'auto' (so 'auto' and 10 seed identically; a number caps lower)
+- [x] survival rule replaces MIN_COLOUR_DIST and MIN_GROUP_SHARE
+  - The rule alone let a ring of anti-aliased edge cells survive as a second grey (ΔE 21.5 from black, over 2% of cells). Added `blendOf`: an edge cell whose colour lies within 16 RGB of the line from the background colour to a neighbour's colour takes that neighbour's colour. It only applies on plain backgrounds without invert, and leaves real light colours such as skin alone.
+- [x] palette entries are mean RGB of each group's cells
+- [x] background by minimum contrast (the test where minimum and mean disagree failed under the stand-in)
+- [x] full tests (202) and build pass
+- [ ] review
+- Real photos at 40 columns: 9–10 colours each, under 25 ms each; the white dog gets a dark board.
 
 ## Result

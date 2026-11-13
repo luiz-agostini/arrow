@@ -30,3 +30,10 @@ test('the ring keeps its hole empty', () => {
     }),
   );
 });
+
+test('built-in boards are stable', () => {
+  for (const { name, mask, seed } of LEVELS) {
+    const lines = generate(mask, seed).arrows.map((a) => `${a.id} ${a.dir} ${a.cells.map((c) => `${c.x},${c.y}`).join(' ')}`);
+    expect(lines.join('\n')).toMatchSnapshot(name);
+  }
+});

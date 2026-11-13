@@ -103,6 +103,16 @@ describe('pictureToLevel', () => {
     expect(mask[2][5]).not.toBe(mask[6][5]);
   });
 
+  test('a subject cropped at the bottom and sides still counts as on a plain background', () => {
+    const HAIR: Rgba = [40, 30, 20, 255];
+    const SKIN: Rgba = [232, 205, 185, 255];
+    // About 56% of the border stays white: the skin runs off the bottom and both sides.
+    const cropped = paint(100, 100, (x, y) => (y >= 60 ? SKIN : inBox(x, y, 20, 30, 79, 59) ? HAIR : WHITE));
+    const { mask, cells } = pictureToLevel(cropped, { cols: 10, colors: 4, invert: false });
+    expect(cells).toBe(58);
+    expect(mask[9]).not.toContain('.');
+  });
+
   test('a busy border falls back to the brightness split', () => {
     const halves = paint(100, 100, (x) => (x < 50 ? BLACK : WHITE));
     const { mask, cells } = pictureToLevel(halves, { cols: 10, colors: 4, invert: false });

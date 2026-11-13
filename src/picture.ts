@@ -13,7 +13,7 @@ const BG_DISTANCE = 32;
 /** Colour groups smaller than this share of the shape (or 3 cells) merge into their nearest group. */
 const MIN_GROUP_SHARE = 0.05;
 /** Share of border pixels that must match the background colour for it to count as plain. */
-const PLAIN_BORDER_SHARE = 0.8;
+const PLAIN_BORDER_SHARE = 0.55;
 
 type Rgb = [number, number, number];
 type CellColour = { rgb: Rgb; alpha: number; lum: number };

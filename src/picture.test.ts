@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { gridSize, pictureToLevel } from './picture';
+import { gridSize, MAX_ROWS, pictureToLevel } from './picture';
 import { BLACK, BLUE, paint, RED, WHITE, type Rgba } from './test-helpers';
 
 const inBox = (x: number, y: number, x0: number, y0: number, x1: number, y1: number) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
@@ -7,13 +7,27 @@ const square = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) ? BLACK : 
 const filled = (mask: string[]) => mask.flatMap((row, y) => [...row].flatMap((ch, x) => (ch === '.' ? [] : [`${x},${y}`])));
 
 describe('gridSize', () => {
-  test('keeps the aspect ratio and caps rows at 40', () => {
-    expect(gridSize(100, 300, 20)).toEqual({ cols: 13, rows: 40 });
+  test('keeps the aspect ratio and caps rows at 80', () => {
+    expect(MAX_ROWS).toBe(80);
+    expect(gridSize(100, 300, 20)).toEqual({ cols: 20, rows: 60 });
+    expect(gridSize(100, 500, 20)).toEqual({ cols: 16, rows: 80 });
     expect(gridSize(200, 100, 20)).toEqual({ cols: 20, rows: 10 });
   });
 });
 
 describe('pictureToLevel', () => {
+  test("'auto' colours match 4 colours and add a background", () => {
+    const { background, ...auto } = pictureToLevel(square, { cols: 10, colors: 'auto', invert: false });
+    const { background: _, ...four } = pictureToLevel(square, { cols: 10, colors: 4, invert: false });
+    expect(auto).toEqual(four);
+    expect(background).toBe('light');
+  });
+
+  test('a light palette gets the dark background', () => {
+    const light = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) ? WHITE : BLACK));
+    expect(pictureToLevel(light, { cols: 10, colors: 4, invert: false }).background).toBe('dark');
+  });
+
   test('a black square on white becomes a block of cells', () => {
     const { mask, palette, cells } = pictureToLevel(square, { cols: 10, colors: 4, invert: false });
     expect(mask).toHaveLength(10);

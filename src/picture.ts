@@ -1,6 +1,10 @@
+import { contrastRatio, DARK_BG, LIGHT_BG } from './colors';
+
 export type Pixels = { width: number; height: number; data: Uint8ClampedArray };
 
-export const MAX_ROWS = 40;
+export const MAX_ROWS = 80;
+/** Colour count used for `colors: 'auto'` until real Auto selection lands. */
+const AUTO_COLORS = 4;
 const OPAQUE = 128;
 const TRANSPARENT_SHARE = 0.01;
 const MIN_CONTRAST = 16;
@@ -180,8 +184,8 @@ function plainBackground(p: Pixels): Rgb | null {
  */
 export function pictureToLevel(
   p: Pixels,
-  opts: { cols: number; colors: number; invert: boolean },
-): { mask: string[]; palette: string[]; cells: number } {
+  opts: { cols: number; colors: number | 'auto'; invert: boolean },
+): { mask: string[]; palette: string[]; cells: number; background: 'light' | 'dark' } {
   const { cols, rows } = gridSize(p.width, p.height, opts.cols);
   const cells = averageCells(p, cols, rows);
   let transparent = 0;
@@ -211,7 +215,9 @@ export function pictureToLevel(
   }
 
   const shape = on.flatMap((v, i) => (v ? [i] : []));
-  if (!shape.length) return { mask: Array.from({ length: rows }, () => '.'.repeat(cols)), palette: [], cells: 0 };
+  if (!shape.length) {
+    return { mask: Array.from({ length: rows }, () => '.'.repeat(cols)), palette: [], cells: 0, background: 'light' };
+  }
   // Colour comes from the shape's own pixels, so edges and thin lines don't mix in the background.
   // On a plain background, only each cell's strongest pixels count (at least half as far from
   // the background as the farthest one), so anti-aliased edges don't add washed-out colours.
@@ -231,10 +237,17 @@ export function pictureToLevel(
     own.get(i) ?? [i - 1, i + 1, i - cols, i + cols].map((n) => own.get(n)).find((c) => c) ?? cells[i].rgb;
   const { labels, centres } = quantize(
     shape.map(colourOf),
-    opts.colors,
+    opts.colors === 'auto' ? AUTO_COLORS : opts.colors,
   );
   const chars = new Array(cols * rows).fill('.');
   shape.forEach((i, j) => (chars[i] = String(labels[j])));
   const mask = Array.from({ length: rows }, (_, y) => chars.slice(y * cols, (y + 1) * cols).join(''));
-  return { mask, palette: centres.map(hex), cells: shape.length };
+  const palette = centres.map(hex);
+  return { mask, palette, cells: shape.length, background: backgroundFor(palette) };
+}
+
+/** 'dark' when the palette's mean contrast against the light board is lower than against the dark one. */
+function backgroundFor(palette: string[]): 'light' | 'dark' {
+  const mean = (bg: string) => palette.reduce((s, c) => s + contrastRatio(c, bg), 0) / palette.length;
+  return mean(LIGHT_BG) < mean(DARK_BG) ? 'dark' : 'light';
 }

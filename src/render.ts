@@ -1,7 +1,8 @@
 import { DARK_BG, fitContrast, LIGHT_BG } from './colors';
 import { exitRay, head, STEP, type Arrow, type Board, type Cell } from './model';
+import { CELL } from './viewport';
 
-export const CELL = 24;
+export { CELL } from './viewport';
 export const SPEED = 30; // cells per second
 export const FLASH_MS = 400;
 

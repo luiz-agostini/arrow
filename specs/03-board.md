@@ -97,7 +97,7 @@ export function viewBox(v: View, board: { width: number; height: number }): stri
 
 ## Implementation notes
 - [x] `hit.ts` `pickArrow` (pure), tests first. A rival just outside the radius still makes a pick ambiguous, which is what the spec example at radius 1 requires
-- [ ] `viewport.ts` (pure), tests first
+- [x] `viewport.ts` (pure), tests first; `CELL` moved here (render re-exports it) so pure modules never import render
 - [ ] render: stroke 5.5, head half-width 0.32·CELL, board background (`data-bg`, backdrop, `--arrow-c`)
 - [ ] render: pointer press / preview / release, ambiguous quick tap, drag-off cancel, hit-path clicks inert
 - [ ] render: two pointers (pinch/pan) never tap; magnifier with one `<use>`

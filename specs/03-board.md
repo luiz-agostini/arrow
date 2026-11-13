@@ -106,7 +106,12 @@ export function viewBox(v: View, board: { width: number; height: number }): stri
 - [x] magnifier moved to `<body>` and created lazily on the first touch press, so `main svg` stays the board and untouched boards (the editor preview) never get one. The test for this was written right after the change rather than before it.
 - [x] checked in Chrome: a real mouse click on a free arrow commits through `getScreenCTM`; the wheel zooms around the cursor; a touch press (390×844, touch emulation) aims and shows the magnifier; no page errors
 - [x] full tests (234), build
-- [ ] review
+- [ ] review. Round 1 fixes, each test-first:
+  - medium: aim/hover/blocker/hint colours now come from the level backdrop (`svg[data-bg]` sets `--hover`, `--warn`, `--good`; each at least 3:1 on its backdrop)
+  - low: only the primary mouse button taps
+  - low: a lifting finger leaves the remaining two with a fresh pinch baseline
+  - low: pin test that a cancelled press doesn't commit
+  - also: `lostpointercapture` forgets the pointer, so a lost capture can't make every later tap count as a second finger
 
 Interpretations of the spec:
 - **Screen to cell:** without `opts.toCell`, render uses `svg.getScreenCTM()` (scale and offset terms `a`, `d`, `e`, `f`; no rotation). The pick radius in cells is the pixel radius times the cells-per-pixel ratio measured from the same mapping, so a stubbed `toCell` gets a consistent radius.

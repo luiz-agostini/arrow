@@ -235,6 +235,37 @@ describe('pointer taps', () => {
     expect(document.querySelector('svg.magnifier:not([hidden])')).toBeNull();
   });
 
+  test('a cancelled press does not commit and leaves no aim', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 1.5, 2.5);
+    pointer('pointercancel', 1.5, 2.5);
+    expect(onTap).not.toHaveBeenCalled();
+    expect(aimed()).toEqual([]);
+  });
+
+  test('only the primary mouse button taps', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 1.5, 2.5, { button: 2 });
+    pointer('pointerup', 1.5, 2.5, { button: 2 });
+    expect(onTap).not.toHaveBeenCalled();
+    pointer('pointerdown', 1.5, 2.5, { button: 0 });
+    pointer('pointerup', 1.5, 2.5, { button: 0 });
+    expect(onTap).toHaveBeenCalledWith(1);
+  });
+
+  test('losing pointer capture forgets that pointer, so the next tap is a single tap', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+    pointer('lostpointercapture', 1.5, 2.5, { pointerType: 'touch' });
+    pointer('pointerdown', 1.5, 2.5, { pointerId: 2, pointerType: 'touch' });
+    pointer('pointerup', 1.5, 2.5, { pointerId: 2, pointerType: 'touch' });
+    expect(onTap).toHaveBeenCalledTimes(1);
+    expect(onTap).toHaveBeenCalledWith(1);
+  });
+
   test('an arrow that is sliding out cannot be picked', () => {
     const onTap = vi.fn();
     const view = mountBoard(svg, board, onTap, { toCell });
@@ -270,6 +301,18 @@ describe('zoom', () => {
     expect((2.5 * 24 - after[1]) / after[3]).toBeCloseTo((2.5 * 24 - before[1]) / before[3], 6);
   });
 
+  test('when a third finger leaves, the remaining two start a fresh pinch instead of jumping', () => {
+    // Zoomed in, so a stale baseline would visibly change zoom and pan.
+    mountBoard(svg, board, () => {}, { toCell }).zoom(4);
+    pointer('pointerdown', 1, 2, { pointerType: 'touch' });
+    pointer('pointerdown', 3, 2, { pointerId: 2, pointerType: 'touch' });
+    pointer('pointerdown', 4, 3, { pointerId: 3, pointerType: 'touch' });
+    pointer('pointerup', 1, 2, { pointerType: 'touch' });
+    const before = svg.getAttribute('viewBox');
+    pointer('pointermove', 4, 3, { pointerId: 3, pointerType: 'touch' });
+    expect(svg.getAttribute('viewBox')).toBe(before);
+  });
+
   test('spreading two fingers zooms in', () => {
     mountBoard(svg, board, () => {}, { toCell });
     pointer('pointerdown', 1, 2, { pointerType: 'touch' });
@@ -292,4 +335,11 @@ test('the magnifier lives outside the board container and only after a touch pre
   mountBoard(svg, board, () => {}, { toCell });
   expect(document.querySelectorAll('svg.magnifier')).toHaveLength(0);
   stage.remove();
+});
+
+test('aim, hover, blocker and hint colours follow a level backdrop, not the page theme', () => {
+  for (const bg of ['light', 'dark']) {
+    const rule = css.match(new RegExp(`svg\\[data-bg='${bg}'\\]\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+    for (const token of ['--hover', '--warn', '--good']) expect(rule, `${bg} ${token}`).toContain(token);
+  }
 });

@@ -253,6 +253,7 @@ function attachInput(
   let pending: { id: number; at: Point } | null = null;
 
   svg.onpointerdown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size > 1) {
       // A second finger means a gesture, never a tap.
@@ -290,7 +291,8 @@ function attachInput(
 
   const release = (e: PointerEvent, commit: boolean) => {
     pointers.delete(e.pointerId);
-    if (pointers.size < 2) pinch = null;
+    // Whatever two fingers remain start a fresh pinch; fewer end it.
+    pinch = pointers.size === 2 ? twoFingers() : null;
     hideMagnifier();
     const done = press;
     press = null;
@@ -320,4 +322,8 @@ function attachInput(
   };
   svg.onpointerup = (e) => release(e, true);
   svg.onpointercancel = (e) => release(e, false);
+  // Capture can be lost without a pointerup reaching the board; forget that pointer.
+  svg.onlostpointercapture = (e) => {
+    if (pointers.has(e.pointerId)) release(e, false);
+  };
 }

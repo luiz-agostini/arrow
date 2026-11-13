@@ -260,6 +260,19 @@ body {
 
 /* A picture level can choose its own board background. */
 
+/* Feedback colours that read on the level's own backdrop, whatever the page theme. */
+svg[data-bg='light'] {
+  --hover: #2d251d;
+  --warn: #b36b00;
+  --good: #1f7a44;
+}
+
+svg[data-bg='dark'] {
+  --hover: #ffc07a;
+  --warn: #ffd34d;
+  --good: #6ee06a;
+}
+
 svg[data-bg='light'] .backdrop {
   fill: #f3ecdf;
 }

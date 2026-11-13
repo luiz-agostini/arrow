@@ -1,17 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { gridSize, pictureToLevel, type Pixels } from './picture';
-
-type Rgba = [number, number, number, number];
-const WHITE: Rgba = [255, 255, 255, 255];
-const BLACK: Rgba = [0, 0, 0, 255];
-const RED: Rgba = [220, 30, 30, 255];
-const BLUE: Rgba = [30, 30, 220, 255];
-
-function paint(width: number, height: number, at: (x: number, y: number) => Rgba): Pixels {
-  const data = new Uint8ClampedArray(width * height * 4);
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) data.set(at(x, y), (y * width + x) * 4);
-  return { width, height, data };
-}
+import { gridSize, pictureToLevel } from './picture';
+import { BLACK, BLUE, paint, RED, WHITE } from './test-helpers';
 
 const inBox = (x: number, y: number, x0: number, y0: number, x1: number, y1: number) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
 const square = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) ? BLACK : WHITE));

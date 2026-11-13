@@ -1,7 +1,9 @@
 import { LIVES, newGame, tap, type Game } from './game';
 import { generate } from './generate';
-import { LEVELS } from './levels';
+import { openEditor, decodeImage as decodeWithCanvas } from './editor';
+import { LEVELS, type Level } from './levels';
 import { mountBoard, type BoardView } from './render';
+import type { Pixels } from './picture';
 import { freeArrows } from './solve';
 import './style.css';
 
@@ -27,7 +29,8 @@ function saveProgress(n: number): void {
 
 const STATUS: Record<Game['status'], string> = { playing: '', won: 'Cleared!', lost: 'Out of lives' };
 
-export function startApp(root: HTMLElement): void {
+export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => Promise<Pixels> } = {}): void {
+  const decode = deps.decodeImage ?? decodeWithCanvas;
   root.innerHTML = `
     <header class="hud">
       <h1>Arrow Escape</h1>
@@ -43,25 +46,30 @@ export function startApp(root: HTMLElement): void {
       <button type="button" data-action="restart">Restart</button>
       <button type="button" data-action="hint">Hint</button>
       <button type="button" data-action="next">Next level</button>
-    </footer>`;
+      <button type="button" data-action="picture">From picture</button>
+      <input type="file" accept="image/*" data-role="picture-input" hidden />
+    </footer>
+    <section class="editor" data-role="editor" hidden></section>`;
   const svg = root.querySelector('svg')!;
   const role = (r: string) => root.querySelector<HTMLElement>(`[data-role="${r}"]`)!;
   const nextButton = root.querySelector<HTMLButtonElement>('[data-action="next"]')!;
 
   let progress = loadProgress();
-  let index = Math.min(progress, LEVELS.length - 1);
+  // A built-in level has an index; a picture level has none and never counts toward progress.
+  let index: number | null = Math.min(progress, LEVELS.length - 1);
+  let level: Level = LEVELS[index];
   let game: Game;
   let view: BoardView;
   let busy = false;
   let loads = 0;
 
   const update = () => {
-    role('level').textContent = LEVELS[index].name;
+    role('level').textContent = level.name;
     role('lives').textContent = '♥'.repeat(game.lives) + '♡'.repeat(Math.max(0, LIVES - game.lives));
     role('moves').textContent = String(game.moves);
     role('status').textContent = STATUS[game.status];
     root.dataset.status = game.status;
-    nextButton.disabled = index >= LEVELS.length - 1 || (game.status !== 'won' && index >= progress);
+    nextButton.disabled = index === null || index >= LEVELS.length - 1 || (game.status !== 'won' && index >= progress);
   };
 
   const onTap = (id: number) => {
@@ -77,34 +85,51 @@ export function startApp(root: HTMLElement): void {
         if (token === loads) busy = false;
       });
     }
-    if (game.status === 'won' && index + 1 > progress) {
+    if (game.status === 'won' && index !== null && index + 1 > progress) {
       progress = index + 1;
       saveProgress(progress);
     }
     update();
   };
 
-  const load = (i: number) => {
+  const load = (next: Level, i: number | null) => {
+    level = next;
     index = i;
     busy = false;
     loads++;
-    const board = generate(LEVELS[i].mask, LEVELS[i].seed);
+    const board = generate(next.mask, next.seed);
     game = newGame(board);
-    view = mountBoard(svg, board, onTap);
+    view = mountBoard(svg, board, onTap, next.palette);
     update();
   };
 
+  const input = root.querySelector<HTMLInputElement>('[data-role="picture-input"]')!;
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
+    let pixels: Pixels;
+    try {
+      pixels = await decode(file);
+    } catch {
+      role('status').textContent = "Couldn't read that picture";
+      return;
+    }
+    openEditor(role('editor'), pixels, (picked) => load(picked, null));
+  });
+
   root.addEventListener('click', (e) => {
     const action = (e.target as Element).closest('[data-action]')?.getAttribute('data-action');
-    if (action === 'restart') load(index);
+    if (action === 'restart') load(level, index);
+    if (action === 'picture') input.click();
     if (action === 'hint' && game.status === 'playing') {
       const [id] = freeArrows(game.board);
       if (id !== undefined) view.highlight(id);
     }
-    if (action === 'next' && !nextButton.disabled) load(index + 1);
+    if (action === 'next' && !nextButton.disabled && index !== null) load(LEVELS[index + 1], index + 1);
   });
 
-  load(index);
+  load(level, index);
 }
 
 const mount = document.getElementById('app');

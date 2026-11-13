@@ -54,6 +54,8 @@ describe('regionAt', () => {
     expect(regionAt(mask, { x: 1, y: 1 })).toBe(5);
     expect(regionAt(mask, { x: 2, y: 0 })).toBeNull();
     expect(regionAt(['x'], { x: 0, y: 0 })).toBeNull();
-    expect(regionAt(['6'], { x: 0, y: 0 })).toBeNull();
+    expect(regionAt(['6'], { x: 0, y: 0 })).toBe(6);
+    expect(regionAt(['9'], { x: 0, y: 0 })).toBe(9);
+    expect(regionAt(['a'], { x: 0, y: 0 })).toBeNull();
   });
 });

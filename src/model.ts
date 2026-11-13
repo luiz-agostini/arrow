@@ -45,9 +45,9 @@ export function removeArrow(b: Board, id: number): Board {
   return { ...b, arrows: b.arrows.filter((a) => a.id !== id) };
 }
 
-/** Region index of a mask cell: `#` is region 0, `0`–`5` are themselves, anything else is empty. */
+/** Region index of a mask cell: `#` is region 0, `0`–`9` are themselves, anything else is empty. */
 export function regionAt(mask: string[], c: Cell): number | null {
   const ch = mask[c.y]?.[c.x];
   if (ch === '#') return 0;
-  return ch !== undefined && ch >= '0' && ch <= '5' ? Number(ch) : null;
+  return ch !== undefined && ch >= '0' && ch <= '9' ? Number(ch) : null;
 }

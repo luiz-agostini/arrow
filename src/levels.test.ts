@@ -8,11 +8,15 @@ test('there are 22 levels with unique names', () => {
   expect(new Set(LEVELS.map((l) => l.name)).size).toBe(22);
 });
 
-describe.each(LEVELS)('$name', ({ mask, seed }) => {
+describe.each(LEVELS)('$name', ({ mask, seed, background }) => {
   test('mask is rectangular with at least 40 cells', () => {
     expect(new Set(mask.map((r) => r.length)).size).toBe(1);
     expect(mask.join('').replace(/\./g, '').length).toBeGreaterThanOrEqual(40);
-    expect(mask.join('')).toMatch(/^[#.0-5]+$/);
+    expect(mask.join('')).toMatch(/^[#.0-9]+$/);
+  });
+
+  test('any background is light or dark', () => {
+    if (background !== undefined) expect(['light', 'dark']).toContain(background);
   });
 
   test('generates a solvable board covering at least 95% of the shape', () => {

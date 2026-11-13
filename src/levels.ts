@@ -1,4 +1,4 @@
-export type Level = { name: string; mask: string[]; seed: number; palette?: string[] };
+export type Level = { name: string; mask: string[]; seed: number; palette?: string[]; background?: 'light' | 'dark' };
 
 export const LEVELS: Level[] = [
   {

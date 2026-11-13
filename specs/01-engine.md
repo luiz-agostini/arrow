@@ -1,6 +1,6 @@
 # 01-engine: Fast, dense boards at 64×80
 
-Status: in-progress
+Status: done
 Depends on: 00-contracts
 Size: M
 
@@ -64,6 +64,21 @@ export function solve(b: Board): number[] | null;       // unchanged signature
   - Without `fillGaps`, Thumbs Up (0.947) and Smiles (0.944) fell below 95% with their stored seeds, and this spec may not change `levels.ts`.
 - [x] regenerate snapshots (deliberate: 22 updated), full tests (192) and build pass
 - [x] 200-seed two-region `checkBoard` pin (written after the code, so it pins rather than drives)
-- [ ] review
+- [x] review (APPROVE after one round of fixes)
 
 ## Result
+- **Speed:** `solve` builds one owner map and a wait list; on 64×80 boards it fell from ~2950 ms to well under the 1500 ms budget (perf tests run in 150–200 ms). `freeArrows` builds its map once.
+- **Density:** `MAX_LEN = 12` with the spec's biased target length. Two additions the spec didn't name keep coverage at 95%:
+  - The body walk prefers the neighbour with the fewest free neighbours.
+  - `fillGaps` attaches uncovered cells to a safe tail, or inserts them as safely ordered singles.
+- **`absorbSingles` index (behaviour 2):** a cell → crossing-arrow index; boards unchanged.
+- **Snapshots:** all 22 built-in boards were regenerated on purpose. Their coverage stays ≥ 95%.
+- **Tests:**
+  - perf (full and two-region masks)
+  - average length ≥ 3.5 with no arrow over 12
+  - 200-seed two-region validity
+  - solve's self-block and wait-chain paths
+- **Checks:** `npm test` 194 passed, `npm run build` passes. Reviewer verdict: APPROVE.
+- **Left open:** fragmented picture masks still give short arrows (average 1.4–2.5 on noise and stripes); someone should play a few regenerated boards.
+
+DONE

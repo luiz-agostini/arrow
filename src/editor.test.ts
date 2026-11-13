@@ -85,6 +85,8 @@ test('play starts the picture level without touching progress', async () => {
   expect($('main svg g.arrow').getAttribute('style')).toContain('--arrow-light');
   expect($<HTMLButtonElement>('[data-action="next"]').disabled).toBe(true);
   expect(localStorage.getItem('arrow.progress')).toBeNull();
+  expect(localStorage.getItem('arrow.cleared')).toBeNull();
+  expect(root.querySelector('[data-level][aria-current]')).toBeNull();
   click('[data-action="restart"]');
   expect($('[data-role="level"]').textContent).toBe('Your picture');
 });
@@ -118,4 +120,11 @@ test('a picture that cannot be decoded shows a message', async () => {
   await flush();
   expect($('[data-role="status"]').textContent).toBe("Couldn't read that picture");
   expect(editor().hidden).toBe(true);
+});
+
+test('picking a level from the pane leaves a picture level', async () => {
+  await pickPicture(twoTone);
+  click('[data-action="play"]');
+  click('[data-level="1"]');
+  expect($('[data-role="level"]').textContent).toBe('Fish');
 });

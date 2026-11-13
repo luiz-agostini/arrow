@@ -52,14 +52,122 @@ body {
 }
 
 #app {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 16px;
   height: 100vh;
   height: 100dvh;
-  max-width: 900px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 12px 16px;
+}
+
+.game {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  min-height: 0;
+}
+
+/* Level pane: a column on wide screens, a drawer on narrow ones. */
+
+.levels {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px 8px;
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.levels h2 {
+  margin: 0 8px 8px;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.levels ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.levels button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.levels button:hover {
+  background: var(--bg);
+}
+
+.levels button[aria-current='true'] {
+  background: var(--bg);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--arrow);
+}
+
+.levels .tick {
+  color: var(--good);
+  visibility: hidden;
+}
+
+.levels .cleared .tick {
+  visibility: visible;
+}
+
+.levels-toggle {
+  display: none;
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+@media (max-width: 799px) {
+  #app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .levels {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 5;
+    width: min(260px, 80vw);
+    border-radius: 0 10px 10px 0;
+    box-shadow: 0 0 24px rgb(0 0 0 / 0.3);
+    transform: translateX(-105%);
+    transition: transform 200ms ease;
+  }
+
+  [data-drawer='open'] .levels {
+    transform: none;
+  }
+
+  /* While the drawer is open, a tap on the game only closes it. */
+  [data-drawer='open'] .game {
+    pointer-events: none;
+  }
+
+  .levels-toggle {
+    display: inline-block;
+  }
 }
 
 .hud {

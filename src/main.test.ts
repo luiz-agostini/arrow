@@ -34,7 +34,7 @@ test('starts on the first level with full lives', () => {
   expect(text('lives')).toBe('♥♥♥');
   expect(text('moves')).toBe('0');
   expect(root.querySelectorAll('g.arrow')).toHaveLength(level1.arrows.length);
-  expect(($('[data-action="next"]') as HTMLButtonElement).disabled).toBe(true);
+  expect(($('[data-action="next"]') as HTMLButtonElement).disabled).toBe(false);
 });
 
 test('taps during a slide are ignored', async () => {
@@ -85,20 +85,21 @@ test('hint highlights a free arrow', () => {
   expect(freeArrows(level1)).toContain(Number(hinted[0].getAttribute('data-id')));
 });
 
-test('clearing the board wins, saves progress and unlocks the next level', async () => {
+test('clearing the board wins, saves it as cleared and moves on with Next', async () => {
   startApp(root);
   for (const id of solve(level1)!) {
     tapArrow(id);
     await settle();
   }
   expect(text('status')).toBe('Cleared!');
-  expect(localStorage.getItem('arrow.progress')).toBe('1');
+  expect(JSON.parse(localStorage.getItem('arrow.cleared')!)).toEqual(['Heart']);
+  expect(root.querySelector('[data-level="0"]')!.classList.contains('cleared')).toBe(true);
   click('[data-action="next"]');
   expect(text('level')).toBe('Fish');
   expect(text('moves')).toBe('0');
 });
 
-test('saved progress resumes at the next unsolved level', () => {
+test('progress saved by older versions resumes at the next unsolved level', () => {
   localStorage.setItem('arrow.progress', '2');
   startApp(root);
   expect(text('level')).toBe('Rocket');
@@ -120,5 +121,48 @@ test('works when storage throws', () => {
     throw new Error('blocked');
   });
   startApp(root);
+  expect(text('level')).toBe('Heart');
+});
+
+const listed = () => [...root.querySelectorAll<HTMLButtonElement>('[data-level]')];
+
+test('the level pane lists every level in order', () => {
+  startApp(root);
+  expect(listed().map((b) => b.textContent!.replace('✓', '').trim())).toEqual(LEVELS.map((l) => l.name));
+  expect(listed()[0].getAttribute('aria-current')).toBe('true');
+});
+
+test('any level can be picked from the pane, without unlocking it first', () => {
+  startApp(root);
+  const last = LEVELS.length - 1;
+  click(`[data-level="${last}"]`);
+  expect(text('level')).toBe(LEVELS[last].name);
+  expect(text('moves')).toBe('0');
+  expect(listed()[last].getAttribute('aria-current')).toBe('true');
+  expect(listed()[0].hasAttribute('aria-current')).toBe(false);
+  expect(($('[data-action="next"]') as HTMLButtonElement).disabled).toBe(true);
+});
+
+test('starts at the first level not yet cleared and marks cleared ones', () => {
+  localStorage.setItem('arrow.cleared', JSON.stringify(['Heart', 'Fish', 'Cat']));
+  startApp(root);
+  expect(text('level')).toBe('Rocket');
+  expect(listed().filter((b) => b.classList.contains('cleared')).map((b) => b.dataset.level)).toEqual(['0', '1', '3']);
+});
+
+test('the Levels button opens the pane as a drawer and picking a level closes it', () => {
+  startApp(root);
+  click('[data-action="levels"]');
+  expect(root.dataset.drawer).toBe('open');
+  click('[data-level="2"]');
+  expect(root.dataset.drawer).toBeUndefined();
+  expect(text('level')).toBe(LEVELS[2].name);
+});
+
+test('tapping outside the open drawer closes it', () => {
+  startApp(root);
+  click('[data-action="levels"]');
+  click('[data-role="level"]');
+  expect(root.dataset.drawer).toBeUndefined();
   expect(text('level')).toBe('Heart');
 });

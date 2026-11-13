@@ -3,15 +3,15 @@ import { generate } from './generate';
 import { LEVELS } from './levels';
 import { checkBoard } from './test-helpers';
 
-test('there are 6 levels with unique names', () => {
-  expect(LEVELS).toHaveLength(6);
-  expect(new Set(LEVELS.map((l) => l.name)).size).toBe(6);
+test('there are 22 levels with unique names', () => {
+  expect(LEVELS).toHaveLength(22);
+  expect(new Set(LEVELS.map((l) => l.name)).size).toBe(22);
 });
 
 describe.each(LEVELS)('$name', ({ mask, seed }) => {
   test('mask is rectangular with at least 40 cells', () => {
     expect(new Set(mask.map((r) => r.length)).size).toBe(1);
-    expect(mask.join('').replace(/[^#]/g, '').length).toBeGreaterThanOrEqual(40);
+    expect(mask.join('').replace(/\./g, '').length).toBeGreaterThanOrEqual(40);
     expect(mask.join('')).toMatch(/^[#.0-5]+$/);
   });
 

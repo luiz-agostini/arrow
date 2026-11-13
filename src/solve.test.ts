@@ -34,3 +34,27 @@ test('solve returns null for a deadlock', () => {
 test('solve of an empty board is empty', () => {
   expect(solve({ width: 3, height: 3, arrows: [] })).toEqual([]);
 });
+
+test('an arrow whose ray runs back into its own body makes the board unsolvable', () => {
+  const hook: Board = {
+    width: 5,
+    height: 5,
+    arrows: [{ id: 1, cells: [{ x: 1, y: 3 }, { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 3, y: 3 }, { x: 3, y: 4 }, { x: 2, y: 4 }, { x: 2, y: 3 }], dir: 'U' }],
+  };
+  expect(freeArrows(hook)).toEqual([]);
+  expect(solve(hook)).toBeNull();
+});
+
+test('a chain where each arrow waits on the next resolves in order', () => {
+  const chain: Board = {
+    width: 6,
+    height: 3,
+    arrows: [
+      { id: 1, cells: [{ x: 0, y: 1 }, { x: 1, y: 1 }], dir: 'R' },
+      { id: 2, cells: [{ x: 3, y: 0 }, { x: 3, y: 1 }], dir: 'D' },
+      { id: 3, cells: [{ x: 2, y: 2 }, { x: 3, y: 2 }], dir: 'R' },
+    ],
+  };
+  expect(freeArrows(chain)).toEqual([3]);
+  expect(solve(chain)).toEqual([3, 2, 1]);
+});

@@ -135,7 +135,7 @@ function quantize(colours: Rgb[], k: number): { labels: number[]; centres: Rgb[]
   let labels: number[] = [];
   let centres: Rgb[] = [];
   for (let pass = 0; pass < MAX_PASSES; pass++) {
-    const seeds = [0];
+    const seeds = [labs.findIndex((_, j) => !skipped.has(j))];
     while (seeds.length < k) {
       let far = -1;
       let farD = -1;
@@ -173,7 +173,7 @@ function quantize(colours: Rgb[], k: number): { labels: number[]; centres: Rgb[]
       centres[into] = meanOf(labs.filter((_, j) => labels[j] === into));
     }
     // Slots freed by merged-away outliers go to the next candidates on another pass.
-    const freed = doomedSeeds.filter((j) => j !== 0 && !skipped.has(j));
+    const freed = doomedSeeds.filter((j) => !skipped.has(j));
     if (!freed.length || seeds.length < k) break;
     for (const j of freed) skipped.add(j);
   }

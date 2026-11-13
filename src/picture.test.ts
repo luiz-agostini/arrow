@@ -185,15 +185,18 @@ describe('auto colours', () => {
     expect(pictureToLevel(blocks, { cols: 50, colors: 3, invert: false }).palette).toHaveLength(3);
   });
 
-  test('an outlier spot does not use up one of the ten colour slots', () => {
+  test.each([
+    ['inside a block', 20, 60],
+    ['on the first shape cell', 10, 10],
+  ])('an outlier spot %s does not use up one of the ten colour slots', (_, sx, sy) => {
     const colours: Rgba[] = [
       [220, 30, 30, 255], [30, 160, 40, 255], [30, 40, 220, 255], [200, 200, 0, 255],
       [200, 0, 200, 255], [0, 160, 160, 255], [240, 130, 0, 255], [110, 40, 150, 255],
       [0, 0, 0, 255], [110, 110, 110, 255], [120, 70, 30, 255], [0, 30, 90, 255],
     ];
-    // A 2×2 px bright green spot (one cell) inside the black block.
+    // A 2×2 px bright green spot: one cell.
     const blocks = paint(100, 80, (x, y) =>
-      inBox(x, y, 20, 60, 21, 61) ? [0, 255, 0, 255]
+      inBox(x, y, sx, sy, sx + 1, sy + 1) ? [0, 255, 0, 255]
         : x < 10 || x >= 90 || y < 10 || y >= 70 ? WHITE
           : colours[Math.floor((y - 10) / 20) * 4 + Math.floor((x - 10) / 20)],
     );
@@ -254,6 +257,14 @@ describe('auto colours', () => {
   test('auto is deterministic', () => {
     const noisy = paint(80, 80, (x, y) => [(x * 37 + y * 11) % 256, (x * 7) % 256, (y * 13) % 256, 255]);
     expect(pictureToLevel(noisy, { cols: 16, ...auto })).toEqual(pictureToLevel(noisy, { cols: 16, ...auto }));
+  });
+
+  test('a strip where every colour is a one-cell outlier still gets a palette', () => {
+    const hues: Rgba[] = Array.from({ length: 12 }, (_, i) => [(i * 97) % 256, (i * 151 + 60) % 256, (i * 211 + 120) % 256, 255]);
+    const strip = paint(140, 30, (x, y) => (y >= 10 && y < 20 && x >= 10 && x < 130 ? hues[Math.floor((x - 10) / 10)] : WHITE));
+    const { palette, cells } = pictureToLevel(strip, { cols: 14, ...auto });
+    expect(cells).toBe(12);
+    expect(palette.length).toBeGreaterThanOrEqual(1);
   });
 
   test('a tiny shape still gets a palette', () => {

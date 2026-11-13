@@ -1,6 +1,6 @@
 # 00-contracts: Shared types and signatures for high-fidelity picture levels
 
-Status: ready
+Status: done
 Depends on: none
 Size: S
 
@@ -103,12 +103,19 @@ Call sites: `main.ts` passes `{ palette: level.palette, background: level.backgr
 - [x] levels: `Level.background`, character check `/^[#.0-9]+$/`, background check
 - [x] picture: `colors: number | 'auto'`, `background` stand-in, `MAX_ROWS = 80` (updates the `gridSize` test, which assumed 40)
 - [x] render: `BoardOptions` object, `zoom`/`fit` no-ops; update call sites in render.test, editor, main
-- [x] `npm test`, typecheck; [ ] `vite build` (permission prompt blocked it in this session); review
+- [x] `npm test`, typecheck, `vite build`, review
 
 Decisions:
 - `MAX_ROWS` moved from 40 to 80 because the Interfaces section lists it; built-in levels store masks, so no board changes.
 - Empty palette (no shape) reports `background: 'light'`.
-- The editor passes `background` to `mountBoard` but doesn't yet store it on the playable `Level`; that is left to 02/03 to keep this change to call sites.
+- The editor passes `background` to `mountBoard` but doesn't yet store it on the playable `Level`; that is left to 04-editor (which owns `editor.ts`) to keep this change to call sites.
 - `background` and `toCell` are accepted by `mountBoard` but unused until 03.
 
 ## Result
+Built by a parallel agent (stopped before its review), then fast-forwarded onto `feat/picture-levels` and reviewed in the main session.
+- Commits: e5994a5 (`toLab`, `deltaE`), 2d61b14 (ten regions, `Level.background`), 7df3fb6 (`'auto'` and `background` from `pictureToLevel`), f25ac52 (`mountBoard` options, `zoom`/`fit` stubs).
+- `npm test`: 188 passed, snapshots unchanged. `npm run build`: passes.
+- Left for later specs: real Auto colours and background choice (02), using `background`/`toCell` and real zoom (03), storing `background` on the editor's Level (04).
+- Reviewer verdict: APPROVE.
+
+DONE

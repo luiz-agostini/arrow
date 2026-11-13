@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { blockerOf, exitRay, removeArrow, type Arrow, type Board } from './model';
+import { blockerOf, exitRay, regionAt, removeArrow, type Arrow, type Board } from './model';
 
 const A: Arrow = { id: 1, cells: [{ x: 0, y: 2 }, { x: 1, y: 2 }], dir: 'R' };
 const B: Arrow = { id: 2, cells: [{ x: 3, y: 0 }, { x: 3, y: 1 }, { x: 3, y: 2 }], dir: 'D' };
@@ -42,5 +42,18 @@ describe('removeArrow', () => {
     expect(blockerOf(after, A.id)).toBeNull();
     expect(board.arrows).toHaveLength(2);
     expect(after.arrows.map((a) => a.id)).toEqual([A.id]);
+  });
+});
+
+describe('regionAt', () => {
+  const mask = ['#.', '05'];
+  test('maps # and digits to regions and the rest to null', () => {
+    expect(regionAt(mask, { x: 0, y: 0 })).toBe(0);
+    expect(regionAt(mask, { x: 1, y: 0 })).toBeNull();
+    expect(regionAt(mask, { x: 0, y: 1 })).toBe(0);
+    expect(regionAt(mask, { x: 1, y: 1 })).toBe(5);
+    expect(regionAt(mask, { x: 2, y: 0 })).toBeNull();
+    expect(regionAt(['x'], { x: 0, y: 0 })).toBeNull();
+    expect(regionAt(['6'], { x: 0, y: 0 })).toBeNull();
   });
 });

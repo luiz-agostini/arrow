@@ -1,6 +1,6 @@
 export type Dir = 'U' | 'D' | 'L' | 'R';
 export type Cell = { x: number; y: number };
-export type Arrow = { id: number; cells: Cell[]; dir: Dir };
+export type Arrow = { id: number; cells: Cell[]; dir: Dir; region?: number };
 export type Board = { width: number; height: number; arrows: Arrow[] };
 
 export const STEP: Record<Dir, Cell> = {
@@ -43,4 +43,11 @@ export function blockerOf(b: Board, id: number): number | null {
 
 export function removeArrow(b: Board, id: number): Board {
   return { ...b, arrows: b.arrows.filter((a) => a.id !== id) };
+}
+
+/** Region index of a mask cell: `#` is region 0, `0`–`5` are themselves, anything else is empty. */
+export function regionAt(mask: string[], c: Cell): number | null {
+  const ch = mask[c.y]?.[c.x];
+  if (ch === '#') return 0;
+  return ch !== undefined && ch >= '0' && ch <= '5' ? Number(ch) : null;
 }

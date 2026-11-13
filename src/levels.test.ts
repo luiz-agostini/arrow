@@ -12,7 +12,7 @@ describe.each(LEVELS)('$name', ({ mask, seed }) => {
   test('mask is rectangular with at least 40 cells', () => {
     expect(new Set(mask.map((r) => r.length)).size).toBe(1);
     expect(mask.join('').replace(/[^#]/g, '').length).toBeGreaterThanOrEqual(40);
-    expect(mask.join('')).toMatch(/^[#.]+$/);
+    expect(mask.join('')).toMatch(/^[#.0-5]+$/);
   });
 
   test('generates a solvable board covering at least 95% of the shape', () => {

@@ -53,6 +53,7 @@ export function startApp(root: HTMLElement): void {
   let game: Game;
   let view: BoardView;
   let busy = false;
+  let loads = 0;
 
   const update = () => {
     role('level').textContent = LEVELS[index].name;
@@ -70,8 +71,10 @@ export function startApp(root: HTMLElement): void {
     if (result === 'blocked') view.flashBlocked(id, blocker!);
     if (result === 'removed') {
       busy = true;
+      const token = loads;
       view.slideOut(id).then(() => {
-        busy = false;
+        // A slide from a board that was since replaced must not unlock this one.
+        if (token === loads) busy = false;
       });
     }
     if (game.status === 'won' && index + 1 > progress) {
@@ -84,6 +87,7 @@ export function startApp(root: HTMLElement): void {
   const load = (i: number) => {
     index = i;
     busy = false;
+    loads++;
     const board = generate(LEVELS[i].mask, LEVELS[i].seed);
     game = newGame(board);
     view = mountBoard(svg, board, onTap);

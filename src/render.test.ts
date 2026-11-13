@@ -114,3 +114,29 @@ test('blocker and hint feedback do not rely on colour alone', () => {
   expect(rule('.arrow.blocker .body')).toMatch(/stroke-width/);
   expect(rule('.arrow.hint .body')).toMatch(/animation/);
 });
+
+test('a level background sets the board backdrop and fits colours to that one background', () => {
+  const coloured: Board = { ...board, arrows: board.arrows.map((a) => ({ ...a, region: 0 })) };
+  mountBoard(svg, coloured, () => {}, { palette: ['#571d24'], background: 'light' });
+  expect(svg.dataset.bg).toBe('light');
+  expect(svg.querySelector('rect.backdrop')).not.toBeNull();
+  const group = svg.querySelector<SVGGElement>('g.arrow[data-id="1"]')!;
+  expect(group.style.getPropertyValue('--arrow-c')).toBe('#571d24');
+  mountBoard(svg, coloured, () => {}, { palette: ['#1a1d2a'], background: 'dark' });
+  expect(svg.dataset.bg).toBe('dark');
+  expect(svg.querySelector<SVGGElement>('g.arrow')!.style.getPropertyValue('--arrow-c')).toBe(fitContrast('#1a1d2a', DARK_BG));
+});
+
+test('without a level background there is no backdrop', () => {
+  mountBoard(svg, board, () => {}, { background: 'dark' });
+  mountBoard(svg, board, () => {});
+  expect(svg.dataset.bg).toBeUndefined();
+  expect(svg.querySelector('rect.backdrop')).toBeNull();
+});
+
+test('arrows are drawn thick, with heads 0.32 cell wide on each side', () => {
+  expect(css).toMatch(/\.arrow \.body\s*\{[^}]*stroke-width:\s*5\.5;/);
+  mountBoard(svg, { width: 3, height: 3, arrows: [{ id: 1, cells: [{ x: 0, y: 1 }, { x: 1, y: 1 }], dir: 'R' }] }, () => {});
+  const ys = svg.querySelector('polygon.head')!.getAttribute('points')!.split(' ').map((p) => Number(p.split(',')[1]));
+  expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(2 * 0.32 * 24, 6);
+});

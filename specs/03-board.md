@@ -98,7 +98,8 @@ export function viewBox(v: View, board: { width: number; height: number }): stri
 ## Implementation notes
 - [x] `hit.ts` `pickArrow` (pure), tests first. A rival just outside the radius still makes a pick ambiguous, which is what the spec example at radius 1 requires
 - [x] `viewport.ts` (pure), tests first; `CELL` moved here (render re-exports it) so pure modules never import render
-- [ ] render: stroke 5.5, head half-width 0.32·CELL, board background (`data-bg`, backdrop, `--arrow-c`)
+- [x] render: stroke 5.5, head half-width 0.32·CELL, board background (`data-bg`, backdrop, `--arrow-c`). Arrows now sit in one `g.board-content` (for the magnifier). Blocker stroke and hint pulse raised to 8 so they still stand out against 5.5.
+  - Outside the spec's files: `editor.test.ts` (owned by 04) now expects `--arrow-c` on preview arrows, because the editor already passes `background`; the post-Play check stays `--arrow-light` until 04 puts `background` on the level.
 - [ ] render: pointer press / preview / release, ambiguous quick tap, drag-off cancel, hit-path clicks inert
 - [ ] render: two pointers (pinch/pan) never tap; magnifier with one `<use>`
 - [ ] render: zoom/fit via viewport, wheel zoom

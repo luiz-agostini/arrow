@@ -57,7 +57,7 @@ function drawArrow(b: Board, a: Arrow): Drawn {
   const perp = { x: -step.y, y: step.x };
   const tip = { x: h.x + step.x * CELL * 0.45, y: h.y + step.y * CELL * 0.45 };
   const base = { x: h.x - step.x * CELL * 0.05, y: h.y - step.y * CELL * 0.05 };
-  const w = CELL * 0.28;
+  const w = CELL * 0.32;
   const headEl = el('polygon', {
     class: 'head',
     'data-id': a.id,
@@ -70,21 +70,33 @@ function drawArrow(b: Board, a: Arrow): Drawn {
   return { group, body, head: headEl, travel };
 }
 
+let boards = 0;
+
 export function mountBoard(svg: SVGSVGElement, b: Board, onTap: (id: number) => void, opts: BoardOptions = {}): BoardView {
-  const { palette } = opts;
+  const { palette, background } = opts;
   svg.replaceChildren();
   svg.setAttribute('viewBox', `${-CELL} ${-CELL} ${(b.width + 2) * CELL} ${(b.height + 2) * CELL}`);
+  // A level's own background is drawn as a backdrop; arrows are then fitted to it alone.
+  if (background) svg.dataset.bg = background;
+  else delete svg.dataset.bg;
+  const content = el('g', { class: 'board-content', id: `board-${++boards}` });
+  if (background) {
+    content.append(el('rect', { class: 'backdrop', x: -CELL, y: -CELL, width: (b.width + 2) * CELL, height: (b.height + 2) * CELL }));
+  }
+  svg.append(content);
   const drawn = new Map<number, Drawn>();
   const arrows = new Map(b.arrows.map((a) => [a.id, a]));
   for (const a of b.arrows) {
     const d = drawArrow(b, a);
     const colour = palette?.[a.region ?? 0];
-    if (colour) {
+    if (colour && background) {
+      d.group.style.setProperty('--arrow-c', fitContrast(colour, background === 'light' ? LIGHT_BG : DARK_BG));
+    } else if (colour) {
       d.group.style.setProperty('--arrow-light', fitContrast(colour, LIGHT_BG));
       d.group.style.setProperty('--arrow-dark', fitContrast(colour, DARK_BG));
     }
     drawn.set(a.id, d);
-    svg.append(d.group);
+    content.append(d.group);
   }
   svg.onclick = (e) => {
     const id = (e.target as Element).closest('[data-id]')?.getAttribute('data-id');

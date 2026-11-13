@@ -48,7 +48,7 @@ test('picking a picture shows a coloured preview with coverage', async () => {
   await pickPicture(twoTone);
   expect(editor().hidden).toBe(false);
   expect(editor().querySelectorAll('g.arrow').length).toBeGreaterThan(0);
-  expect(editor().querySelector('g.arrow')!.getAttribute('style')).toContain('--arrow-light');
+  expect(editor().querySelector('g.arrow')!.getAttribute('style')).toContain('--arrow-c');
   expect($('[data-role="coverage"]').textContent).toMatch(/^Coverage \d+%$/);
   expect($<HTMLButtonElement>('[data-action="play"]').disabled).toBe(false);
 });
@@ -68,7 +68,7 @@ test('grid size, invert and shuffle regenerate the preview', async () => {
 
 test('changing the number of colours changes the palette', async () => {
   await pickPicture(twoTone);
-  const colours = () => new Set([...editor().querySelectorAll<SVGGElement>('g.arrow')].map((g) => g.style.getPropertyValue('--arrow-light')));
+  const colours = () => new Set([...editor().querySelectorAll<SVGGElement>('g.arrow')].map((g) => g.style.getPropertyValue('--arrow-c')));
   expect(colours().size).toBe(2);
   const select = $<HTMLSelectElement>('[data-role="colors"]');
   expect([...select.options].map((o) => o.value)).toEqual(['1', '2', '3', '4', '5', '6']);

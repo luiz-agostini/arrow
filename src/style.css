@@ -257,6 +257,16 @@ body {
   cursor: default;
 }
 
+/* A picture level can choose its own board background. */
+
+svg[data-bg='light'] .backdrop {
+  fill: #f3ecdf;
+}
+
+svg[data-bg='dark'] .backdrop {
+  fill: #171a26;
+}
+
 /* Arrows. A picture level sets --arrow-light and --arrow-dark per arrow. */
 
 .arrow {
@@ -276,7 +286,7 @@ body {
 .arrow .body {
   fill: none;
   stroke: var(--arrow-c);
-  stroke-width: 3.5;
+  stroke-width: 5.5;
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: stroke 120ms;
@@ -318,7 +328,7 @@ body {
 
 .arrow.blocker .body {
   stroke: var(--warn);
-  stroke-width: 6;
+  stroke-width: 8;
   filter: drop-shadow(0 0 3px var(--warn));
 }
 
@@ -356,7 +366,7 @@ body {
 
 @keyframes pulse {
   50% {
-    stroke-width: 6.5;
+    stroke-width: 8;
   }
 }
 
@@ -367,7 +377,7 @@ body {
 
   .arrow.hint .body {
     animation: none;
-    stroke-width: 6;
+    stroke-width: 8;
   }
 }
 

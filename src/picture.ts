@@ -248,10 +248,20 @@ export function pictureToLevel(
   const own = new Map<number, Rgb | null>(shape.map((i) => [i, ownColour(i)]));
   const neighbours = (i: number) =>
     [i % cols > 0 ? i - 1 : -1, i % cols < cols - 1 ? i + 1 : -1, i - cols, i + cols].filter((n) => n >= 0 && n < on.length);
-  // A cell on the shape's edge whose colour is a blend of the background and a
+  // A cell on the shape's edge that straddles the background (some of its own pixels
+  // are background-coloured) and whose colour is a blend of the background and a
   // neighbouring shape colour is anti-aliasing; it takes that neighbour's colour.
+  // Full cells of a tint or shadow hold no background pixels, so they keep theirs.
+  const touchesBackground = (i: number) => {
+    let found = false;
+    eachPixel(p, cols, rows, i, (px) => {
+      if (bg && dist2(rgbAt(px), bg) <= BG_DISTANCE ** 2) found = true;
+    });
+    return found;
+  };
   const blendOf = (i: number, c: Rgb): Rgb | null => {
-    if (!bg || opts.invert || neighbours(i).every((n) => on[n]) && neighbours(i).length === 4) return null;
+    if (!bg || opts.invert || (neighbours(i).every((n) => on[n]) && neighbours(i).length === 4)) return null;
+    if (!touchesBackground(i)) return null;
     for (const n of neighbours(i)) {
       const cn = own.get(n);
       if (!on[n] || !cn) continue;

@@ -214,6 +214,19 @@ describe('auto colours', () => {
     expect(mask[10][4]).not.toBe(mask[10][10]);
   });
 
+  test.each([
+    ['a grey drop shadow beside black', BLACK, [150, 150, 150, 255]],
+    ['a pink stripe beside red', RED, [240, 170, 170, 255]],
+  ] as const)('%s keeps its own colour', (_, main, tint) => {
+    // A full one-cell band (5 px cells at cols 20) along the right side of the shape.
+    const picture = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 69, 69) ? [...main] : inBox(x, y, 70, 20, 74, 69) ? [...tint] : WHITE));
+    for (const colors of ['auto', 2] as const) {
+      const { mask, palette } = pictureToLevel(picture, { cols: 20, colors, invert: false });
+      expect(palette).toHaveLength(2);
+      expect(mask[8][14]).not.toBe(mask[8][8]);
+    }
+  });
+
   test('anti-aliased edges still give one colour with auto', () => {
     const circle = paint(200, 200, (x, y) => {
       const edge = Math.hypot(x + 0.5 - 100, y + 0.5 - 100) - 70;

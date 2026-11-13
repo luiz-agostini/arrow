@@ -57,7 +57,11 @@ Markup: `select[data-role="colors"]` options `auto,1,…,10` (default `auto`); `
 - [x] tests first: slider 12–64 default 40 everywhere, colour options auto/1–10, copy, serializeLevel, clipboard failure, background reaches Play, one regeneration per frame (9 failed before the change)
 - [x] implement in `editor.ts`: options labelled 'Auto' and 1–10; 'Copy as level' button; the playable level carries `background`; input re-renders throttled with `requestAnimationFrame`
 - [x] full tests (245) and build
-- [ ] review
+- [ ] review. Round 1 fixes, each test-first:
+  - medium: a missing `navigator.clipboard` (insecure origin, older browsers) shows "Couldn't copy the level" instead of throwing
+  - low: Play and Copy first run any pending throttled render, so they use the current controls
+  - low: a successful copy clears an earlier copy error
+  - low: Copy is disabled together with Play when no shape is found
 
 Interpretations:
 - **Throttling:** slider, colour and invert inputs schedule one regeneration on the next animation frame. Opening the editor and Shuffle still render at once.

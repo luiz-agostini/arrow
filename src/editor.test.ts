@@ -181,3 +181,37 @@ test('picking a level from the pane leaves a picture level', async () => {
   click('[data-level="1"]');
   expect($('[data-role="level"]').textContent).toBe('Fish');
 });
+
+test('copy reports a missing clipboard instead of throwing', async () => {
+  Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+  await pickPicture(twoTone);
+  click('[data-action="copy-level"]');
+  await flush();
+  expect($('[data-role="editor-status"]').textContent).toBe("Couldn't copy the level");
+});
+
+test('a copy that succeeds after a failed one clears the message', async () => {
+  const writeText = vi.fn().mockRejectedValueOnce(new Error('not focused')).mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  await pickPicture(twoTone);
+  click('[data-action="copy-level"]');
+  await flush();
+  expect($('[data-role="editor-status"]').textContent).toBe("Couldn't copy the level");
+  click('[data-action="copy-level"]');
+  await flush();
+  expect($('[data-role="editor-status"]').textContent).toBe('');
+});
+
+test('copy is disabled like play when no shape is found', async () => {
+  await pickPicture(grey);
+  expect($<HTMLButtonElement>('[data-action="copy-level"]').disabled).toBe(true);
+});
+
+test('play right after changing a control uses the new settings, not the last frame', async () => {
+  await pickPicture(twoTone);
+  const slider = $<HTMLInputElement>('[data-role="grid-size"]');
+  slider.value = '12';
+  slider.dispatchEvent(new Event('input', { bubbles: true }));
+  click('[data-action="play"]');
+  expect($('main svg.board').getAttribute('viewBox')).toBe('-24 -24 336 336');
+});

@@ -56,6 +56,7 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
   const status = get<HTMLElement>('[data-role="editor-status"]');
   const coverage = get<HTMLElement>('[data-role="coverage"]');
   const play = get<HTMLButtonElement>('[data-action="play"]');
+  const copy = get<HTMLButtonElement>('[data-action="copy-level"]');
   let seed = 1;
   let level: Level | null = null;
 
@@ -70,7 +71,7 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
       svg.replaceChildren();
       status.textContent = 'No shape found — try Invert';
       coverage.textContent = '';
-      play.disabled = true;
+      play.disabled = copy.disabled = true;
       return;
     }
     level = { name: 'Your picture', mask, seed, palette, background };
@@ -79,30 +80,44 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
     const covered = board.arrows.reduce((n, a) => n + a.cells.length, 0);
     status.textContent = '';
     coverage.textContent = `Coverage ${Math.round((covered / cells) * 100)}%`;
-    play.disabled = false;
+    play.disabled = copy.disabled = false;
   };
 
   // Dragging the slider fires many inputs; regenerate at most once per frame.
-  let scheduled = false;
+  let scheduled: number | null = null;
   host.oninput = () => {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(() => {
-      scheduled = false;
+    if (scheduled !== null) return;
+    scheduled = requestAnimationFrame(() => {
+      scheduled = null;
       render();
     });
   };
+  // Play and Copy act on the controls as they are now, even if a frame hasn't run yet.
+  const settle = () => {
+    if (scheduled === null) return;
+    cancelAnimationFrame(scheduled);
+    scheduled = null;
+    render();
+  };
   host.onclick = (e) => {
     const action = (e.target as Element).closest('[data-action]')?.getAttribute('data-action');
+    if (action === 'play' || action === 'copy-level') settle();
     if (action === 'shuffle') {
       seed++;
       render();
     }
     if (action === 'cancel') host.hidden = true;
     if (action === 'copy-level' && level) {
-      navigator.clipboard.writeText(serializeLevel(level)).catch(() => {
-        status.textContent = "Couldn't copy the level";
-      });
+      // The clipboard API is missing on insecure origins and older browsers.
+      const written = navigator.clipboard?.writeText(serializeLevel(level)) ?? Promise.reject(new Error('no clipboard'));
+      written.then(
+        () => {
+          status.textContent = '';
+        },
+        () => {
+          status.textContent = "Couldn't copy the level";
+        },
+      );
     }
     if (action === 'play' && level) {
       host.hidden = true;

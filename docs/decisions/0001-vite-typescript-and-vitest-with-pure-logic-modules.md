@@ -1,6 +1,6 @@
 # 0001: Vite, TypeScript and Vitest with pure logic modules
 
-Status: accepted
+Status: superseded by 0004
 Date: 2026-11-13
 Supersedes: none
 Rule: The app uses Vite + TypeScript + Vitest with no UI framework, and only `src/render.ts` and `src/main.ts` may touch the DOM; `model`, `generate`, `solve` and `game` are pure functions.

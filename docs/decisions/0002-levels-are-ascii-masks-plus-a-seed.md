@@ -1,6 +1,6 @@
 # 0002: Levels are ASCII masks plus a seed
 
-Status: accepted
+Status: superseded by 0005
 Date: 2026-11-13
 Supersedes: none
 Rule: A level is `{ name, mask: string[], seed }` with `#` for playable cells and `.` for empty ones, and boards are always produced by `generate(mask, seed)` using only the seeded RNG, never stored or hand-placed.

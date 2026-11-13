@@ -1,6 +1,6 @@
 # 02-colour: Picture colours that match the photo
 
-Status: in-progress
+Status: done
 Depends on: 00-contracts
 Size: M
 
@@ -71,11 +71,25 @@ export function pictureToLevel(
 - [x] palette entries are mean RGB of each group's cells
 - [x] background by minimum contrast (the test where minimum and mean disagree failed under the stand-in)
 - [x] full tests (202) and build pass
-- [ ] review. Round 1 found three issues, each fixed test-first:
+- [x] review: APPROVE after two fix rounds. Round 1 found three issues, each fixed test-first:
   - high: `blendOf` ran on transparent pictures (bg came from invisible pixels' RGB); bg is now only used without transparency
   - medium: `blendOf` swallowed real tints and drop shadows; a blend now requires the cell to contain background-coloured pixels
   - medium: outlier seeds used up slots; when a seed's group is merged away, clustering reruns without it (up to 4 passes)
   - low: the stale "'auto' matches 4" test now compares 'auto' with `colors: 10`
+  - Round 2: an outlier on the first shape cell could still hold a slot; each pass now starts from the first colour that isn't skipped
 - Real photos at 40 columns: 9–10 colours each, under 25 ms each; the white dog gets a dark board.
 
 ## Result
+- **Colours:** grouped in Lab (ΔE).
+  - `'auto'` seeds up to 10 groups while each new one is ≥ ΔE 12 away. A number caps it lower.
+  - Groups survive when ≥ 2% of the shape, or ≥ 2 cells and ≥ ΔE 25 from their nearest group.
+  - When outlier seeds are merged away, clustering reruns without them, up to 4 passes.
+  - Palette entries are each group's mean RGB.
+- **Additions the spec didn't name:**
+  - `blendOf` recolours anti-aliased edge cells (cells that straddle the background and blend it with a neighbour's colour). It only applies on plain, non-transparent backgrounds.
+  - The plain background colour is only used when the picture has no transparency.
+- **Background:** the board on which the palette's least visible colour has the most contrast; ties go to light.
+- **Checks:** `npm test` 209 passed, `npm run build` passes. Real photos at 40 columns take 12–34 ms; a noisy 64×80 picture takes 52 ms. Reviewer verdict: APPROVE.
+- **Left open:** photos usually get 9–10 colours under Auto, because skin and hair gradients produce many distinct shades. Whether that reads well is judged in 98.
+
+DONE

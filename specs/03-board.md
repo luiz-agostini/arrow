@@ -1,6 +1,6 @@
 # 03-board: Dense rendering, precise taps and zoom
 
-Status: ready
+Status: in-progress
 Depends on: 00-contracts
 Size: L
 
@@ -96,5 +96,18 @@ export function viewBox(v: View, board: { width: number; height: number }): stri
 - Vitest fake timers fake `performance` and `requestAnimationFrame` (see the existing `render.test.ts`).
 
 ## Implementation notes
+- [x] `hit.ts` `pickArrow` (pure), tests first. A rival just outside the radius still makes a pick ambiguous, which is what the spec example at radius 1 requires
+- [ ] `viewport.ts` (pure), tests first
+- [ ] render: stroke 5.5, head half-width 0.32·CELL, board background (`data-bg`, backdrop, `--arrow-c`)
+- [ ] render: pointer press / preview / release, ambiguous quick tap, drag-off cancel, hit-path clicks inert
+- [ ] render: two pointers (pinch/pan) never tap; magnifier with one `<use>`
+- [ ] render: zoom/fit via viewport, wheel zoom
+- [ ] full tests, build, review
+
+Interpretations of the spec:
+- **Screen to cell:** without `opts.toCell`, render uses `svg.getScreenCTM()` (scale and offset terms `a`, `d`, `e`, `f`; no rotation). The pick radius in cells is the pixel radius times the cells-per-pixel ratio measured from the same mapping, so a stubbed `toCell` gets a consistent radius.
+- **Confirming an ambiguous tap:** the next quick tap confirms when it lands within 0.5 cell of the first tap's point or of the aimed arrow's body.
+- **Pan clamp:** when zoomed in, the view stays inside the board plus its one-cell margin, and at scale 1 the view is fixed at fit. That is stricter than "half the board stays in view", which is impossible at 8×.
+- **Outside the spec's files:** `main.test.ts` (owned by 99) changes minimally. Its tap helper now dispatches pointer events at the arrow's head cell, and it stubs `getScreenCTM`, because decision 0007 makes `click` on hit paths inert.
 
 ## Result

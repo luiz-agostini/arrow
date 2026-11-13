@@ -56,7 +56,7 @@ Markup: `select[data-role="colors"]` options `auto,1,…,10` (default `auto`); `
 ## Implementation notes
 - [x] tests first: slider 12–64 default 40 everywhere, colour options auto/1–10, copy, serializeLevel, clipboard failure, background reaches Play, one regeneration per frame (9 failed before the change)
 - [x] implement in `editor.ts`: options labelled 'Auto' and 1–10; 'Copy as level' button; the playable level carries `background`; input re-renders throttled with `requestAnimationFrame`
-- [x] full tests (247) and build
+- [x] full tests (245) and build
 - [ ] review
 
 Interpretations:

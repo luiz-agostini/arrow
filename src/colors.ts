@@ -6,6 +6,32 @@ type Rgb = [number, number, number];
 const parse = (hex: string): Rgb => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as Rgb;
 const toHex = (rgb: Rgb) => '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
 
+const EPSILON = 216 / 24389;
+const KAPPA = 24389 / 27;
+const WHITE_D65: Rgb = [0.95047, 1, 1.08883];
+
+/** sRGB (0–255) to CIE Lab with the D65 white point. */
+export function toLab(rgb: Rgb): Rgb {
+  const [r, g, b] = rgb.map((v) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const xyz = [
+    0.4124564 * r + 0.3575761 * g + 0.1804375 * b,
+    0.2126729 * r + 0.7151522 * g + 0.072175 * b,
+    0.0193339 * r + 0.119192 * g + 0.9503041 * b,
+  ].map((v, i) => v / WHITE_D65[i]);
+  const [fx, fy, fz] = xyz.map((t) => (t > EPSILON ? Math.cbrt(t) : (KAPPA * t + 16) / 116));
+  const l = xyz[1] > EPSILON ? 116 * fy - 16 : KAPPA * xyz[1];
+  return [l, 500 * (fx - fy), 200 * (fy - fz)];
+}
+
+/** CIE76 colour difference between two `#rrggbb` colours. */
+export function deltaE(a: string, b: string): number {
+  const [la, lb] = [toLab(parse(a)), toLab(parse(b))];
+  return Math.hypot(la[0] - lb[0], la[1] - lb[1], la[2] - lb[2]);
+}
+
 function luminance(hex: string): number {
   const [r, g, b] = parse(hex).map((v) => {
     const c = v / 255;

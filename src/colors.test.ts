@@ -1,6 +1,21 @@
 import { describe, expect, test } from 'vitest';
-import { contrastRatio, DARK_BG, fitContrast, LIGHT_BG } from './colors';
+import { contrastRatio, DARK_BG, deltaE, fitContrast, LIGHT_BG, toLab } from './colors';
 import css from './style.css?raw';
+
+describe('toLab', () => {
+  test('maps white and black to the D65 reference values', () => {
+    const white = toLab([255, 255, 255]);
+    [100, 0, 0].forEach((v, i) => expect(Math.abs(white[i] - v)).toBeLessThanOrEqual(0.5));
+    expect(toLab([0, 0, 0]).map((v) => v + 0)).toEqual([0, 0, 0]);
+  });
+});
+
+describe('deltaE', () => {
+  test('is 0 for equal colours and about 100 from black to white', () => {
+    expect(deltaE('#ff0000', '#ff0000')).toBe(0);
+    expect(Math.abs(deltaE('#000000', '#ffffff') - 100)).toBeLessThanOrEqual(0.5);
+  });
+});
 
 const luminanceOf = (hex: string) => contrastRatio(hex, '#000000');
 

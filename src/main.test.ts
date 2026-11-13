@@ -41,9 +41,9 @@ afterEach(() => {
   root.remove();
 });
 
-test('starts on the first level with full lives', () => {
+test('starts on Cachorrinho Deitado with full lives', () => {
   startApp(root);
-  expect(text('level')).toBe('Heart');
+  expect(text('level')).toBe('Cachorrinho Deitado');
   expect(text('lives')).toBe('♥♥♥');
   expect(text('moves')).toBe('0');
   expect(root.querySelectorAll('g.arrow')).toHaveLength(level1.arrows.length);
@@ -104,25 +104,25 @@ test('clearing the board wins, saves it as cleared and moves on with Next', asyn
     tapArrow(id);
     await settle();
   }
-  expect(text('status')).toBe('Cleared!');
-  expect(JSON.parse(localStorage.getItem('arrow.cleared')!)).toEqual(['Heart']);
+  expect(text('status')).toBe('Concluído!');
+  expect(JSON.parse(localStorage.getItem('arrow.cleared')!)).toEqual([LEVELS[0].name]);
   expect(root.querySelector('[data-level="0"]')!.classList.contains('cleared')).toBe(true);
   click('[data-action="next"]');
-  expect(text('level')).toBe('Fish');
+  expect(text('level')).toBe(LEVELS[1].name);
   expect(text('moves')).toBe('0');
 });
 
 test('progress saved by older versions resumes at the next unsolved level', () => {
   localStorage.setItem('arrow.progress', '2');
   startApp(root);
-  expect(text('level')).toBe('Rocket');
+  expect(text('level')).toBe(LEVELS[2].name);
 });
 
 test('losing all lives ends the game; restart resets it', async () => {
   startApp(root);
   const blocked = level1.arrows.find((a) => blockerOf(level1, a.id) !== null)!;
   for (let i = 0; i < 3; i++) tapArrow(blocked.id);
-  expect(text('status')).toBe('Out of lives');
+  expect(text('status')).toBe('Sem vidas');
   click('[data-action="restart"]');
   expect(text('lives')).toBe('♥♥♥');
   expect(text('status')).toBe('');
@@ -134,7 +134,7 @@ test('works when storage throws', () => {
     throw new Error('blocked');
   });
   startApp(root);
-  expect(text('level')).toBe('Heart');
+  expect(text('level')).toBe(LEVELS[0].name);
 });
 
 const listed = () => [...root.querySelectorAll<HTMLButtonElement>('[data-level]')];
@@ -157,9 +157,9 @@ test('any level can be picked from the pane, without unlocking it first', () => 
 });
 
 test('starts at the first level not yet cleared and marks cleared ones', () => {
-  localStorage.setItem('arrow.cleared', JSON.stringify(['Heart', 'Fish', 'Cat']));
+  localStorage.setItem('arrow.cleared', JSON.stringify([LEVELS[0].name, LEVELS[1].name, LEVELS[3].name]));
   startApp(root);
-  expect(text('level')).toBe('Rocket');
+  expect(text('level')).toBe(LEVELS[2].name);
   expect(listed().filter((b) => b.classList.contains('cleared')).map((b) => b.dataset.level)).toEqual(['0', '1', '3']);
 });
 
@@ -177,7 +177,7 @@ test('tapping outside the open drawer closes it', () => {
   click('[data-action="levels"]');
   click('[data-role="level"]');
   expect(root.dataset.drawer).toBeUndefined();
-  expect(text('level')).toBe('Heart');
+  expect(text('level')).toBe(LEVELS[0].name);
 });
 
 describe('zoom buttons', () => {

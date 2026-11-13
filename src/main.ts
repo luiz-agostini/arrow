@@ -31,37 +31,37 @@ function saveCleared(cleared: Set<string>): void {
   }
 }
 
-const STATUS: Record<Game['status'], string> = { playing: '', won: 'Cleared!', lost: 'Out of lives' };
+const STATUS: Record<Game['status'], string> = { playing: '', won: 'Concluído!', lost: 'Sem vidas' };
 
 export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => Promise<Pixels> } = {}): void {
   const decode = deps.decodeImage ?? decodeWithCanvas;
   root.innerHTML = `
-    <aside class="levels" aria-label="Levels">
-      <h2>Levels</h2>
+    <aside class="levels" aria-label="Níveis">
+      <h2>Níveis</h2>
       <ol data-role="level-list"></ol>
     </aside>
     <div class="game">
       <header class="hud">
-        <button type="button" class="levels-toggle" data-action="levels" aria-label="Show levels">☰ Levels</button>
-        <h1>Arrow Escape</h1>
+        <button type="button" class="levels-toggle" data-action="levels" aria-label="Mostrar níveis">☰ Níveis</button>
+        <h1>Jogo da Lindinha</h1>
         <span class="level" data-role="level"></span>
-        <span class="lives" data-role="lives" aria-label="lives"></span>
-        <span class="moves">Moves <b data-role="moves"></b></span>
+        <span class="lives" data-role="lives" aria-label="vidas"></span>
+        <span class="moves">Jogadas <b data-role="moves"></b></span>
       </header>
       <main class="stage">
-        <svg class="board" role="img" aria-label="puzzle board"></svg>
+        <svg class="board" role="img" aria-label="tabuleiro"></svg>
         <p class="status" data-role="status" aria-live="polite"></p>
         <div class="zoom-controls">
-          <button type="button" data-action="zoom-in" aria-label="Zoom in">+</button>
-          <button type="button" data-action="zoom-out" aria-label="Zoom out">−</button>
-          <button type="button" data-action="zoom-fit" aria-label="Fit board">Fit</button>
+          <button type="button" data-action="zoom-in" aria-label="Aproximar">+</button>
+          <button type="button" data-action="zoom-out" aria-label="Afastar">−</button>
+          <button type="button" data-action="zoom-fit" aria-label="Ajustar ao tabuleiro">Ajustar</button>
         </div>
       </main>
       <footer class="controls">
-        <button type="button" data-action="restart">Restart</button>
-        <button type="button" data-action="hint">Hint</button>
-        <button type="button" data-action="next">Next level</button>
-        <button type="button" data-action="picture">From picture</button>
+        <button type="button" data-action="restart">Recomeçar</button>
+        <button type="button" data-action="hint">Dica</button>
+        <button type="button" data-action="next">Próximo nível</button>
+        <button type="button" data-action="picture">Usar foto</button>
         <input type="file" accept="image/*" data-role="picture-input" hidden />
       </footer>
     </div>
@@ -80,7 +80,7 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
     button.textContent = l.name;
     const tick = document.createElement('span');
     tick.className = 'tick';
-    tick.setAttribute('aria-label', 'cleared');
+    tick.setAttribute('aria-label', 'concluído');
     tick.textContent = '✓';
     button.append(tick);
     item.append(button);
@@ -150,7 +150,7 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
     try {
       pixels = await decode(file);
     } catch {
-      role('status').textContent = "Couldn't read that picture";
+      role('status').textContent = 'Não foi possível ler essa imagem';
       return;
     }
     openEditor(role('editor'), pixels, (picked) => load(picked, null));

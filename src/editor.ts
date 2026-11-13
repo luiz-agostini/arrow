@@ -29,22 +29,22 @@ export async function decodeImage(file: File): Promise<Pixels> {
 export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Level) => void): void {
   host.innerHTML = `
     <div class="editor-panel">
-      <h2>Your picture</h2>
-      <svg class="board preview" role="img" aria-label="level preview"></svg>
+      <h2>Sua foto</h2>
+      <svg class="board preview" role="img" aria-label="prévia do nível"></svg>
       <p class="editor-status" data-role="editor-status" aria-live="polite"></p>
       <div class="editor-controls">
-        <label>Size <input type="range" data-role="grid-size" min="${MIN_COLS}" max="${MAX_COLS}" value="${DEFAULT_COLS}" /></label>
-        <label>Colours <select data-role="colors">${COLOR_CHOICES.map(
-          (c) => `<option value="${c}">${c === 'auto' ? 'Auto' : c}</option>`,
+        <label>Tamanho <input type="range" data-role="grid-size" min="${MIN_COLS}" max="${MAX_COLS}" value="${DEFAULT_COLS}" /></label>
+        <label>Cores <select data-role="colors">${COLOR_CHOICES.map(
+          (c) => `<option value="${c}">${c === 'auto' ? 'Automático' : c}</option>`,
         ).join('')}</select></label>
-        <label><input type="checkbox" data-role="invert" /> Invert</label>
-        <button type="button" data-action="shuffle">Shuffle</button>
+        <label><input type="checkbox" data-role="invert" /> Inverter</label>
+        <button type="button" data-action="shuffle">Embaralhar</button>
       </div>
       <div class="editor-actions">
         <span data-role="coverage"></span>
-        <button type="button" data-action="copy-level">Copy as level</button>
-        <button type="button" data-action="cancel">Cancel</button>
-        <button type="button" data-action="play">Play</button>
+        <button type="button" data-action="copy-level">Copiar como nível</button>
+        <button type="button" data-action="cancel">Cancelar</button>
+        <button type="button" data-action="play">Jogar</button>
       </div>
     </div>`;
   host.hidden = false;
@@ -69,17 +69,17 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
     if (cells < MIN_CELLS) {
       level = null;
       svg.replaceChildren();
-      status.textContent = 'No shape found — try Invert';
+      status.textContent = 'Nenhuma forma encontrada — tente Inverter';
       coverage.textContent = '';
       play.disabled = copy.disabled = true;
       return;
     }
-    level = { name: 'Your picture', mask, seed, palette, background };
+    level = { name: 'Sua foto', mask, seed, palette, background };
     const board = generate(mask, seed);
     mountBoard(svg, board, () => {}, { palette, background });
     const covered = board.arrows.reduce((n, a) => n + a.cells.length, 0);
     status.textContent = '';
-    coverage.textContent = `Coverage ${Math.round((covered / cells) * 100)}%`;
+    coverage.textContent = `Cobertura ${Math.round((covered / cells) * 100)}%`;
     play.disabled = copy.disabled = false;
   };
 
@@ -115,7 +115,7 @@ export function openEditor(host: HTMLElement, pixels: Pixels, onPlay: (level: Le
           status.textContent = '';
         },
         () => {
-          status.textContent = "Couldn't copy the level";
+          status.textContent = 'Não foi possível copiar o nível';
         },
       );
     }

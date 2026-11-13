@@ -24,8 +24,13 @@ describe.each(LEVELS)('$name', ({ mask, seed, background }) => {
   });
 });
 
+test('Cachorrinho Deitado comes first and the six original shape levels come last', () => {
+  expect(LEVELS[0].name).toBe('Cachorrinho Deitado');
+  expect(LEVELS.slice(-6).map((l) => l.name)).toEqual(['Coração', 'Peixe', 'Foguete', 'Gato', 'Árvore', 'Anel']);
+});
+
 test('the ring keeps its hole empty', () => {
-  const ring = LEVELS.find((l) => l.name === 'Ring')!;
+  const ring = LEVELS.find((l) => l.name === 'Anel')!;
   const b = generate(ring.mask, ring.seed);
   const used = new Set(b.arrows.flatMap((a) => a.cells.map((c) => `${c.x},${c.y}`)));
   ring.mask.forEach((row, y) =>

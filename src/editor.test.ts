@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { serializeLevel } from './editor';
 import { generate } from './generate';
+import { LEVELS } from './levels';
 import { startApp } from './main';
 import { pictureToLevel, type Pixels } from './picture';
 
@@ -59,7 +60,7 @@ test('picking a picture shows a coloured preview with coverage', async () => {
   expect(editor().hidden).toBe(false);
   expect(editor().querySelectorAll('g.arrow').length).toBeGreaterThan(0);
   expect(editor().querySelector('g.arrow')!.getAttribute('style')).toContain('--arrow-c');
-  expect($('[data-role="coverage"]').textContent).toMatch(/^Coverage \d+%$/);
+  expect($('[data-role="coverage"]').textContent).toMatch(/^Cobertura \d+%$/);
   expect($<HTMLButtonElement>('[data-action="play"]').disabled).toBe(false);
 });
 
@@ -91,7 +92,7 @@ test('play starts the picture level without touching progress', async () => {
   await pickPicture(twoTone);
   click('[data-action="play"]');
   expect(editor().hidden).toBe(true);
-  expect($('[data-role="level"]').textContent).toBe('Your picture');
+  expect($('[data-role="level"]').textContent).toBe('Sua foto');
   expect($('main svg g.arrow').getAttribute('style')).toContain('--arrow-c');
   const expected = pictureToLevel(twoTone, { cols: 40, colors: 'auto', invert: false }).background;
   expect($<SVGSVGElement>('main svg.board').dataset.bg).toBe(expected);
@@ -100,20 +101,20 @@ test('play starts the picture level without touching progress', async () => {
   expect(localStorage.getItem('arrow.cleared')).toBeNull();
   expect(root.querySelector('[data-level][aria-current]')).toBeNull();
   click('[data-action="restart"]');
-  expect($('[data-role="level"]').textContent).toBe('Your picture');
+  expect($('[data-role="level"]').textContent).toBe('Sua foto');
 });
 
 test('cancel closes the editor and keeps the current level', async () => {
   await pickPicture(twoTone);
   click('[data-action="cancel"]');
   expect(editor().hidden).toBe(true);
-  expect($('[data-role="level"]').textContent).toBe('Heart');
+  expect($('[data-role="level"]').textContent).toBe(LEVELS[0].name);
 });
 
 test('a picture without a shape cannot be played', async () => {
   await pickPicture(grey);
   expect($<HTMLButtonElement>('[data-action="play"]').disabled).toBe(true);
-  expect($('[data-role="editor-status"]').textContent).toBe('No shape found — try Invert');
+  expect($('[data-role="editor-status"]').textContent).toBe('Nenhuma forma encontrada — tente Inverter');
 });
 
 test.each([400, 1024])('grid size runs from 12 to 64, default 40, at %i px wide', async (width) => {
@@ -145,7 +146,7 @@ test('copy as level writes the level source to the clipboard', async () => {
   await flush();
   expect(writeText).toHaveBeenCalledTimes(1);
   const text = writeText.mock.calls[0][0] as string;
-  expect(text).toContain("name: 'Your picture'");
+  expect(text).toContain("name: 'Sua foto'");
   expect(text).toContain("background: '");
   expect(text).toContain('mask: [');
 });
@@ -155,7 +156,7 @@ test('a rejected clipboard shows a message', async () => {
   await pickPicture(twoTone);
   click('[data-action="copy-level"]');
   await flush();
-  expect($('[data-role="editor-status"]').textContent).toBe("Couldn't copy the level");
+  expect($('[data-role="editor-status"]').textContent).toBe('Não foi possível copiar o nível');
 });
 
 test('serializeLevel writes a levels.ts entry, escaping quotes and omitting absent fields', () => {
@@ -171,7 +172,7 @@ test('a picture that cannot be decoded shows a message', async () => {
   Object.defineProperty(input, 'files', { value: [new File([''], 'pic.heic')] });
   input.dispatchEvent(new Event('change', { bubbles: true }));
   await flush();
-  expect($('[data-role="status"]').textContent).toBe("Couldn't read that picture");
+  expect($('[data-role="status"]').textContent).toBe('Não foi possível ler essa imagem');
   expect(editor().hidden).toBe(true);
 });
 
@@ -179,7 +180,7 @@ test('picking a level from the pane leaves a picture level', async () => {
   await pickPicture(twoTone);
   click('[data-action="play"]');
   click('[data-level="1"]');
-  expect($('[data-role="level"]').textContent).toBe('Fish');
+  expect($('[data-role="level"]').textContent).toBe(LEVELS[1].name);
 });
 
 test('copy reports a missing clipboard instead of throwing', async () => {
@@ -187,7 +188,7 @@ test('copy reports a missing clipboard instead of throwing', async () => {
   await pickPicture(twoTone);
   click('[data-action="copy-level"]');
   await flush();
-  expect($('[data-role="editor-status"]').textContent).toBe("Couldn't copy the level");
+  expect($('[data-role="editor-status"]').textContent).toBe('Não foi possível copiar o nível');
 });
 
 test('a copy that succeeds after a failed one clears the message', async () => {
@@ -196,7 +197,7 @@ test('a copy that succeeds after a failed one clears the message', async () => {
   await pickPicture(twoTone);
   click('[data-action="copy-level"]');
   await flush();
-  expect($('[data-role="editor-status"]').textContent).toBe("Couldn't copy the level");
+  expect($('[data-role="editor-status"]').textContent).toBe('Não foi possível copiar o nível');
   click('[data-action="copy-level"]');
   await flush();
   expect($('[data-role="editor-status"]').textContent).toBe('');

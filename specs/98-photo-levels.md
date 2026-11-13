@@ -1,6 +1,6 @@
 # 98-photo-levels: Regenerate the 16 photo levels
 
-Status: in-progress
+Status: done
 Depends on: 00-contracts, 01-engine, 02-colour, 04-editor
 Size: S
 
@@ -62,6 +62,13 @@ Each entry is produced by `serializeLevel(level)` from `src/editor.ts`, from `pi
 - [x] name drift: a contact sheet of each photo beside its regenerated level confirms all 16 names
 - [x] snapshots: 16 updated (the photo levels only); the six shape levels are unchanged
 - [x] full tests and build
-- [ ] review
+- [x] review: APPROVE, no findings
 
 ## Result
+- The 16 photo levels are regenerated at 40 columns with Auto colours (8–10 each) and a chosen background (Sunglasses dark, the rest light). Each uses seed 1 at 100% coverage, and all are solvable.
+- They're ordered by cell count, from Selfie (747) to Video Call (2086). `generate` takes 8–55 ms per level and `solve` ≤ 1 ms.
+- The six shape levels and their snapshots are unchanged.
+- **Checks:** `npm test` 254 passed, `npm run build` passes. Reviewer verdict: APPROVE.
+- **Left for a device test:** readability of Sunglasses on dark and of an 80-row level (Denim, Red Dress, Jersey and Pup) on a phone.
+
+DONE

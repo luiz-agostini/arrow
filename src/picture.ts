@@ -205,8 +205,10 @@ export function pictureToLevel(
 
   // `shapeSide` decides cells from their averages and, below, which pixels give a cell its colour.
   let shapeSide: (alpha: number, rgb: Rgb) => boolean;
-  const bg = plainBackground(p);
-  if (transparent / (p.width * p.height) >= TRANSPARENT_SHARE) {
+  // Transparency decides the shape when present; only otherwise is a plain background colour used.
+  const usesAlpha = transparent / (p.width * p.height) >= TRANSPARENT_SHARE;
+  const bg = usesAlpha ? null : plainBackground(p);
+  if (usesAlpha) {
     shapeSide = (alpha) => alpha >= OPAQUE !== opts.invert;
   } else if (bg) {
     const far = (rgb: Rgb) => dist2(rgb, bg) > BG_DISTANCE ** 2;

@@ -202,6 +202,18 @@ describe('auto colours', () => {
     expect(background).toBe('dark');
   });
 
+  test('an outlined sprite on transparent pixels keeps its outline colour', () => {
+    // Transparent pixels hold rgba(0,0,0,0), as getImageData usually returns them.
+    const ORANGE: Rgba = [240, 120, 0, 255];
+    const OUTLINE: Rgba = [80, 40, 0, 255];
+    const sprite = paint(100, 100, (x, y) =>
+      inBox(x, y, 25, 25, 74, 74) ? ORANGE : inBox(x, y, 20, 20, 79, 79) ? OUTLINE : [0, 0, 0, 0],
+    );
+    const { mask, palette } = pictureToLevel(sprite, { cols: 20, ...auto });
+    expect(palette).toHaveLength(2);
+    expect(mask[10][4]).not.toBe(mask[10][10]);
+  });
+
   test('anti-aliased edges still give one colour with auto', () => {
     const circle = paint(200, 200, (x, y) => {
       const edge = Math.hypot(x + 0.5 - 100, y + 0.5 - 100) - 70;

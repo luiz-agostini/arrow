@@ -532,3 +532,88 @@ svg[data-bg='dark'] .backdrop {
 .controls {
   flex-wrap: wrap;
 }
+
+/* Esteira de Cores */
+
+.esteira {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+
+.esteira-board .backdrop {
+  fill: #171a26;
+}
+
+.esteira-board .track {
+  fill: none;
+  stroke: #3a3f58;
+  stroke-width: 20;
+}
+
+.esteira-board .shooter text {
+  fill: #ffffff;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: rgb(0 0 0 / 0.45);
+  stroke-width: 2;
+}
+
+.esteira-slots,
+.esteira-columns {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.esteira .slot,
+.esteira .column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 48px;
+  padding: 4px;
+  border: 1px solid var(--muted);
+  border-radius: 8px;
+  background: var(--panel);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.esteira .slot:disabled,
+.esteira .column:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Only the front shooter of a column can be sent; the ones behind are a preview. */
+.esteira .column .token + .token {
+  transform: scale(0.75);
+  opacity: 0.6;
+}
+
+.esteira .token {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--token);
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+}
+
+.home-button {
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}

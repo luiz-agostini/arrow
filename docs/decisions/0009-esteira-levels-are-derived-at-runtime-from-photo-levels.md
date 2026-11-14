@@ -1,6 +1,6 @@
-# Esteira levels are derived at runtime from photo levels
+# 0009: Esteira levels are derived at runtime from photo levels
 
-Status: proposed
+Status: accepted
 Date: 2026-11-14
 Supersedes: none
 Rule: Esteira de Cores levels are built at runtime from the photo levels in `LEVELS` by `esteiraLevels()` (never stored as separate data), and every built level must be winnable by `greedyWins`, reseeding until it is.

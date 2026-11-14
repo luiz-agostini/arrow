@@ -1,6 +1,6 @@
 # 0004: DOM code in render, editor and main only
 
-Status: accepted
+Status: superseded by 0008
 Date: 2026-11-13
 Supersedes: 0001
 Rule: The app uses Vite + TypeScript + Vitest with no UI framework, and only `src/render.ts`, `src/editor.ts` and `src/main.ts` may touch the DOM; `model`, `generate`, `solve`, `game`, `picture` and `colors` are pure functions.

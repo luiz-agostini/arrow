@@ -1,6 +1,6 @@
-# DOM code in main, home, render, editor and the esteira view only
+# 0008: DOM code in main, home, render, editor and the esteira view only
 
-Status: proposed
+Status: accepted
 Date: 2026-11-14
 Supersedes: 0004
 Rule: The app uses Vite + TypeScript + Vitest with no UI framework, and only `src/main.ts`, `src/home.ts`, `src/render.ts`, `src/editor.ts` and `src/esteira/view.ts` may touch the DOM; every other module, including `src/esteira/level.ts` and `src/esteira/sim.ts`, is pure.

@@ -2,6 +2,14 @@ import { regionAt } from '../model';
 import { mulberry32, shuffle } from '../rng';
 
 export type Shooter = { id: number; color: number; ammo: number };
+export type EsteiraLevel = {
+  name: string;
+  width: number;
+  height: number;
+  cells: (number | null)[];
+  palette: string[];
+  columns: Shooter[][];
+};
 
 export const COLUMNS = 5;
 export const MAX_AMMO = 20;

@@ -21,7 +21,7 @@ describe('pictureToLevel', () => {
     const { background, ...auto } = pictureToLevel(square, { cols: 10, colors: 'auto', invert: false });
     const { background: _, ...ten } = pictureToLevel(square, { cols: 10, colors: 10, invert: false });
     expect(auto).toEqual(ten);
-    expect(background).toBe('light');
+    expect(background).toBe('dark');
   });
 
   test('a light palette gets the dark background', () => {
@@ -204,21 +204,11 @@ describe('auto colours', () => {
     expect(pictureToLevel(blocks, { cols: 50, ...auto }).palette).toHaveLength(10);
   });
 
-  test('dark colours get a light board and pale colours a dark one', () => {
+  test('every picture level uses the dark board, dark or pale', () => {
     const dress = paint(100, 100, (x, y) => (inBox(x, y, 30, 10, 69, 49) ? [0x57, 0x1d, 0x24, 255] : inBox(x, y, 30, 50, 69, 89) ? [0x8c, 0x35, 0x3d, 255] : WHITE));
-    expect(pictureToLevel(dress, { cols: 20, ...auto }).background).toBe('light');
+    expect(pictureToLevel(dress, { cols: 20, ...auto }).background).toBe('dark');
     const pale = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 79, 79) ? [250, 240, 150, 255] : BLACK));
     expect(pictureToLevel(pale, { cols: 20, ...auto }).background).toBe('dark');
-  });
-
-  test('the board background follows the least visible colour, not the average', () => {
-    // Black reads well on the light board but near-white almost vanishes there; on the
-    // dark board both stay visible, so the minimum contrast picks dark.
-    const GREY: Rgba = [128, 128, 128, 255];
-    const mixed = paint(100, 100, (x, y) => (inBox(x, y, 20, 20, 49, 79) ? BLACK : inBox(x, y, 50, 20, 79, 79) ? [240, 240, 240, 255] : GREY));
-    const { palette, background } = pictureToLevel(mixed, { cols: 20, ...auto });
-    expect(palette).toHaveLength(2);
-    expect(background).toBe('dark');
   });
 
   test('an outlined sprite on transparent pixels keeps its outline colour', () => {

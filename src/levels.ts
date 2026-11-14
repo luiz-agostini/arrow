@@ -295,7 +295,7 @@ export const LEVELS: Level[] = [
     name: 'Cachorrinho Curioso',
     seed: 1,
     palette: ['#7f695a', '#978475', '#b19f8f', '#552813', '#8a4513', '#2f160e', '#6a5142', '#b9601f', '#cfc0ae', '#ad7e5c'],
-    background: 'light',
+    background: 'dark',
     mask: [
       '.....................48030999699........',
       '..................74444333360606........',
@@ -368,7 +368,7 @@ export const LEVELS: Level[] = [
     name: 'De Óculos',
     seed: 1,
     palette: ['#201f1d', '#473426', '#6e4c32', '#926445', '#cb856c', '#b16b4c', '#f3b88f', '#b6866a', '#e4a080', '#fcd1a6'],
-    background: 'light',
+    background: 'dark',
     mask: [
       '...............773727939................',
       '............33333332333333..............',
@@ -426,7 +426,7 @@ export const LEVELS: Level[] = [
     name: 'Óculos',
     seed: 1,
     palette: ['#393937', '#1c1a19', '#5a3821', '#845b3d', '#a97859', '#c48b70', '#f3b28d', '#ffcca2', '#e39276', '#c27462'],
-    background: 'light',
+    background: 'dark',
     mask: [
       '............4434455.....................',
       '.........444433334444...................',
@@ -486,7 +486,7 @@ export const LEVELS: Level[] = [
     name: 'Retrato',
     seed: 1,
     palette: ['#52341f', '#724e32', '#d4c5ac', '#39210f', '#dca47e', '#bb8464', '#9c6b48', '#f8c29c', '#b19c83', '#e8dbc6'],
-    background: 'light',
+    background: 'dark',
     mask: [
       '................10001...................',
       '..............100300101111..............',
@@ -545,7 +545,7 @@ export const LEVELS: Level[] = [
     name: 'Jeans',
     seed: 1,
     palette: ['#7193c0', '#312c34', '#e8b083', '#35527c', '#3b5f9b', '#61493c', '#607190', '#bc7e53', '#be9d86', '#cc6277'],
-    background: 'light',
+    background: 'dark',
     mask: [
       '................55515.............',
       '...............5515111............',
@@ -880,7 +880,7 @@ export const LEVELS: Level[] = [
     name: 'Lado a Lado',
     seed: 1,
     palette: ['#1d202d', '#444244', '#576b77', '#d0d9f7', '#eab99a', '#c79278', '#a4664b', '#8c8785'],
-    background: 'light',
+    background: 'dark',
     mask: [
       '..............111..11111................',
       '.............011011101111...............',
@@ -958,7 +958,7 @@ export const LEVELS: Level[] = [
     name: 'Chamada de Vídeo',
     seed: 1,
     palette: ['#282629', '#45413f', '#69574c', '#897462', '#c28972', '#ad6a4e', '#a4907c', '#e7ad92', '#beb2a3', '#e4dbcd'],
-    background: 'light',
+    background: 'dark',
     mask: [
       '...................6636668..............',
       '..................663336666.............',

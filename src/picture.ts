@@ -1,4 +1,4 @@
-import { contrastRatio, DARK_BG, LIGHT_BG, toLab, vivid } from './colors';
+import { toLab, vivid } from './colors';
 
 export type Pixels = { width: number; height: number; data: Uint8ClampedArray };
 
@@ -247,7 +247,7 @@ export function pictureToLevel(
 
   const shape = on.flatMap((v, i) => (v ? [i] : []));
   if (!shape.length) {
-    return { mask: Array.from({ length: rows }, () => '.'.repeat(cols)), palette: [], cells: 0, background: 'light' };
+    return { mask: Array.from({ length: rows }, () => '.'.repeat(cols)), palette: [], cells: 0, background: 'dark' };
   }
   // Colour comes from the shape's own pixels, so edges and thin lines don't mix in the background.
   // On a plain background, only each cell's strongest pixels count (at least half as far from
@@ -305,13 +305,9 @@ export function pictureToLevel(
   const chars = new Array(cols * rows).fill('.');
   shape.forEach((i, j) => (chars[i] = String(labels[j])));
   const mask = Array.from({ length: rows }, (_, y) => chars.slice(y * cols, (y + 1) * cols).join(''));
+  // Every picture level uses the dark board, so photo levels look alike; colours too
+  // dark for it are lightened when drawn.
   // Group means are muted by the photo's shading, so the palette is brightened afterwards.
   const palette = centres.map((c) => vivid(hex(c)));
-  return { mask, palette, cells: shape.length, background: backgroundFor(palette) };
-}
-
-/** The board on which the palette's least visible colour stands out most; ties go to 'light'. */
-function backgroundFor(palette: string[]): 'light' | 'dark' {
-  const worst = (bg: string) => Math.min(...palette.map((c) => contrastRatio(c, bg)));
-  return worst(LIGHT_BG) >= worst(DARK_BG) ? 'light' : 'dark';
+  return { mask, palette, cells: shape.length, background: 'dark' };
 }

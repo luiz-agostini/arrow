@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { generate } from './generate';
 import { LEVELS } from './levels';
 import { startApp } from './main';
-import { blockerOf, exitRay } from './model';
-import { CELL, SPEED } from './render';
+import { blockerOf } from './model';
+import { CELL } from './render';
 import { freeArrows, solve } from './solve';
 import { paint } from './test-helpers';
 
@@ -50,36 +50,36 @@ test('starts on Cachorrinho Deitado with full lives', () => {
   expect(($('[data-action="next"]') as HTMLButtonElement).disabled).toBe(false);
 });
 
-test('taps during a slide are ignored', async () => {
+test('other arrows can be tapped while one is still sliding out', async () => {
   startApp(root);
   const [a, b] = freeArrows(level1);
   tapArrow(a);
   tapArrow(b);
-  tapArrow(a);
+  expect(text('moves')).toBe('2');
   await settle();
+  expect(root.querySelectorAll('g.arrow')).toHaveLength(level1.arrows.length - 2);
+});
+
+test('tapping an arrow again while it slides out does nothing', async () => {
+  startApp(root);
+  const [a] = freeArrows(level1);
+  tapArrow(a);
+  tapArrow(a);
   expect(text('moves')).toBe('1');
+  expect(text('lives')).toBe('♥♥♥');
+  await settle();
   expect(root.querySelectorAll('g.arrow')).toHaveLength(level1.arrows.length - 1);
 });
 
-test('a slide from before a restart does not unlock input on the new board', async () => {
+test('a slide from before a restart does not disturb the new board', async () => {
   startApp(root);
-  const ms = (id: number) => {
-    const arrow = level1.arrows.find((x) => x.id === id)!;
-    return ((exitRay(level1, arrow).length + arrow.cells.length + 1) / SPEED) * 1000;
-  };
-  const free = freeArrows(level1).sort((x, y) => ms(x) - ms(y));
-  const short = free[0];
-  const long = free[free.length - 1];
-  const other = free[1];
-  expect(ms(long)).toBeGreaterThan(ms(short) + 50);
-
-  tapArrow(short);
+  const [a, b] = freeArrows(level1);
+  tapArrow(a);
   click('[data-action="restart"]');
-  tapArrow(long);
-  // The old slide ends while the new one is still running.
-  await vi.advanceTimersByTimeAsync(ms(short) + 20);
-  tapArrow(other);
+  tapArrow(b);
+  await settle();
   expect(text('moves')).toBe('1');
+  expect(root.querySelectorAll('g.arrow')).toHaveLength(level1.arrows.length - 1);
 });
 
 test('a blocked tap costs a life', async () => {

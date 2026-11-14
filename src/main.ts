@@ -93,8 +93,6 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
   let level: Level = LEVELS[index];
   let game: Game;
   let view: BoardView;
-  let busy = false;
-  let loads = 0;
 
   const update = () => {
     role('level').textContent = level.name;
@@ -110,19 +108,12 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
     });
   };
 
+  // The game state changes at once; the slide is only animation, so play continues during it.
   const onTap = (id: number) => {
-    if (busy) return;
     const { game: next, result, blocker } = tap(game, id);
     game = next;
     if (result === 'blocked') view.flashBlocked(id, blocker!);
-    if (result === 'removed') {
-      busy = true;
-      const token = loads;
-      view.slideOut(id).then(() => {
-        // A slide from a board that was since replaced must not unlock this one.
-        if (token === loads) busy = false;
-      });
-    }
+    if (result === 'removed') void view.slideOut(id);
     if (game.status === 'won' && index !== null && !cleared.has(level.name)) {
       cleared.add(level.name);
       saveCleared(cleared);
@@ -133,8 +124,6 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
   const load = (next: Level, i: number | null) => {
     level = next;
     index = i;
-    busy = false;
-    loads++;
     const board = generate(next.mask, next.seed);
     game = newGame(board);
     view = mountBoard(svg, board, onTap, { palette: next.palette, background: next.background });

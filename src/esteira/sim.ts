@@ -59,6 +59,17 @@ function firstBlock(s: State, line: ReturnType<typeof lineAt>): number {
   return -1;
 }
 
+/** Colours of the blocks a shooter could hit somewhere on the belt right now. */
+export function exposedColors(s: State): Set<number> {
+  const { width, height } = s.level;
+  const colors = new Set<number>();
+  for (let step = 0; step < lapLength(width, height); step++) {
+    const hit = firstBlock(s, lineAt(width, height, step));
+    if (hit >= 0) colors.add(s.cells[hit]!);
+  }
+  return colors;
+}
+
 /**
  * Advances every belt shooter one step. At its position a shooter removes the first
  * block it faces if that block has its colour. After a full lap, a shooter with ammo

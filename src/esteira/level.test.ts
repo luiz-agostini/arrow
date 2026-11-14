@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { dealShooters, downsample } from './level';
+import { LEVELS } from '../levels';
+import { dealShooters, downsample, esteiraLevels, greedyWins, type EsteiraLevel, type Shooter } from './level';
 
 describe('downsample', () => {
   test('fits the picture inside 24×32 blocks', () => {
@@ -42,5 +43,47 @@ describe('dealShooters', () => {
   test('is deterministic per seed', () => {
     expect(dealShooters(cells, 3)).toEqual(dealShooters(cells, 3));
     expect(dealShooters(cells, 3)).not.toEqual(dealShooters(cells, 4));
+  });
+});
+
+describe('greedyWins', () => {
+  // A 3×3 frame of colour 0 around a hidden colour-1 centre.
+  const frame = [0, 0, 0, 0, 1, 0, 0, 0, 0];
+  const make = (column: Shooter[]): EsteiraLevel => ({
+    name: 'frame',
+    width: 3,
+    height: 3,
+    cells: frame,
+    palette: ['#ff0000', '#0000ff'],
+    columns: [column, [], [], [], []],
+  });
+
+  test('wins when each front shooter has an exposed block of its colour', () => {
+    expect(greedyWins(make([{ id: 1, color: 0, ammo: 8 }, { id: 2, color: 1, ammo: 1 }]))).toBe(true);
+  });
+
+  test('gives up when no shooter it can launch has an exposed block', () => {
+    expect(greedyWins(make([{ id: 2, color: 1, ammo: 1 }, { id: 1, color: 0, ammo: 8 }]))).toBe(false);
+  });
+});
+
+describe('esteiraLevels', () => {
+  const photos = LEVELS.filter((l) => l.palette);
+  const start = performance.now();
+  const levels = esteiraLevels();
+  const elapsed = performance.now() - start;
+
+  test('one level per photo level, with the same names, at most 24×32', () => {
+    expect(levels.map((l) => l.name)).toEqual(photos.map((l) => l.name));
+    expect(levels.every((l) => l.width <= 24 && l.height <= 32)).toBe(true);
+    expect(levels.every((l, i) => l.palette === photos[i].palette)).toBe(true);
+  });
+
+  test.each(levels.map((l) => [l.name, l] as const))('%s can be won', (_, level) => {
+    expect(greedyWins(level)).toBe(true);
+  });
+
+  test('builds each level in under 200 ms on average', () => {
+    expect(elapsed / levels.length).toBeLessThan(200);
   });
 });

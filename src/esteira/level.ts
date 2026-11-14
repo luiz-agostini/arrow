@@ -1,5 +1,7 @@
+import { LEVELS } from '../levels';
 import { regionAt } from '../model';
 import { mulberry32, shuffle } from '../rng';
+import { BELT_CAPACITY, exposedColors, lapLength, launch, newGame, tick } from './sim';
 
 export type Shooter = { id: number; color: number; ammo: number };
 export type EsteiraLevel = {
@@ -69,4 +71,46 @@ export function dealShooters(cells: (number | null)[], seed: number): Shooter[][
   const columns: Shooter[][] = Array.from({ length: COLUMNS }, () => []);
   shuffle(shooters, rand).forEach((s, i) => columns[i % COLUMNS].push(s));
   return columns;
+}
+
+/** Seeds tried per photo level before giving up on a winnable deal. */
+const MAX_DEALS = 100;
+
+/**
+ * A simple player: whenever the belt has room, launch a parked or front shooter whose
+ * colour has an exposed block and isn't already riding. It gives up when nothing can be
+ * launched and the belt is empty. True if that wins.
+ */
+export function greedyWins(level: EsteiraLevel): boolean {
+  let s = newGame(level);
+  const limit = lapLength(level.width, level.height) * (level.columns.flat().length + 1) * 4;
+  for (let i = 0; i < limit && s.status === 'playing'; i++) {
+    if (s.belt.length < BELT_CAPACITY) {
+      const exposed = exposedColors(s);
+      const riding = new Set(s.belt.map((b) => b.shooter.color));
+      const useful = (sh: Shooter | null | undefined) => !!sh && exposed.has(sh.color) && !riding.has(sh.color);
+      const slot = s.slots.findIndex(useful);
+      const column = s.columns.findIndex((c) => useful(c[0]));
+      if (slot >= 0) s = launch(s, { slot });
+      else if (column >= 0) s = launch(s, { column });
+      else if (s.belt.length === 0) return false;
+    }
+    s = tick(s);
+  }
+  return s.status === 'won';
+}
+
+/**
+ * One Esteira level per photo level: the photo's mask shrunk to blocks, with shooters
+ * dealt from the level's seed upwards until the greedy player can win (decision B).
+ */
+export function esteiraLevels(): EsteiraLevel[] {
+  return LEVELS.filter((l) => l.palette).map((photo) => {
+    const { width, height, cells } = downsample(photo.mask);
+    for (let seed = photo.seed; seed < photo.seed + MAX_DEALS; seed++) {
+      const level = { name: photo.name, width, height, cells, palette: photo.palette!, columns: dealShooters(cells, seed) };
+      if (greedyWins(level)) return level;
+    }
+    throw new Error(`No winnable deal for ${photo.name}`);
+  });
 }

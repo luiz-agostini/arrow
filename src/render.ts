@@ -45,6 +45,8 @@ const CONFIRM = 0.5;
 const MAGNIFIER_SIZE = 120;
 const MAGNIFIER_ZOOM = 2.5;
 const MAGNIFIER_LIFT = 80;
+/** The loupe only appears once a finger has stayed down this long, so quick taps never flash it. */
+const MAGNIFIER_DELAY = 350;
 /** Wheel zoom factor per unit of deltaY. */
 const WHEEL_BASE = 1.0015;
 
@@ -237,7 +239,16 @@ function attachInput(
     magnifier.style.top = `${e.clientY - MAGNIFIER_LIFT - MAGNIFIER_SIZE / 2}px`;
     magnifier.removeAttribute('hidden');
   };
-  const hideMagnifier = () => magnifiers.get(svg)?.setAttribute('hidden', '');
+  // A touch press only shows the loupe after MAGNIFIER_DELAY; until then it just aims.
+  let loupeTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastTouch: PointerEvent | null = null;
+  let loupeShown = false;
+  const hideMagnifier = () => {
+    if (loupeTimer !== null) clearTimeout(loupeTimer);
+    loupeTimer = null;
+    loupeShown = false;
+    magnifiers.get(svg)?.setAttribute('hidden', '');
+  };
 
   svg.onwheel = (e) => {
     e.preventDefault();
@@ -269,7 +280,15 @@ function attachInput(
     const picked = pick(e);
     press = { id: picked?.id ?? null, start: performance.now(), x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch' };
     aim(press.id ?? pending?.id ?? null);
-    if (press.touch) showMagnifier(e);
+    if (press.touch) {
+      lastTouch = e;
+      loupeTimer = setTimeout(() => {
+        loupeTimer = null;
+        if (!press?.touch || !lastTouch) return;
+        loupeShown = true;
+        showMagnifier(lastTouch);
+      }, MAGNIFIER_DELAY);
+    }
   };
 
   svg.onpointermove = (e) => {
@@ -288,7 +307,10 @@ function attachInput(
     if (!press) return;
     press.id = pick(e)?.id ?? null;
     aim(press.id);
-    if (press.touch) showMagnifier(e);
+    if (press.touch) {
+      lastTouch = e;
+      if (loupeShown) showMagnifier(e);
+    }
   };
 
   const release = (e: PointerEvent, commit: boolean) => {

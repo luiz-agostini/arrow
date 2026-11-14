@@ -218,9 +218,24 @@ describe('pointer taps', () => {
     expect(onTap).not.toHaveBeenCalled();
   });
 
-  test('a touch press shows a magnifier that reuses the board through one <use>', () => {
+  test('a quick touch tap never shows the magnifier', () => {
+    const onTap = vi.fn();
+    mountBoard(svg, board, onTap, { toCell });
+    pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+    expect(document.querySelector('svg.magnifier:not([hidden])')).toBeNull();
+    vi.advanceTimersByTime(200);
+    pointer('pointerup', 1.5, 2.5, { pointerType: 'touch' });
+    vi.advanceTimersByTime(1000);
+    expect(document.querySelector('svg.magnifier:not([hidden])')).toBeNull();
+    expect(onTap).toHaveBeenCalledWith(1);
+  });
+
+  test('holding a touch for 350 ms shows a magnifier that reuses the board through one <use>', () => {
     mountBoard(svg, board, () => {}, { toCell });
     pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+    vi.advanceTimersByTime(349);
+    expect(document.querySelector('svg.magnifier:not([hidden])')).toBeNull();
+    vi.advanceTimersByTime(1);
     const magnifier = document.querySelector<SVGSVGElement>('svg.magnifier')!;
     expect(magnifier.hasAttribute('hidden')).toBe(false);
     expect(magnifier.querySelectorAll('use')).toHaveLength(1);
@@ -329,6 +344,7 @@ test('the magnifier lives outside the board container and only after a touch pre
   mountBoard(svg, board, () => {}, { toCell });
   expect(document.querySelector('svg.magnifier')).toBeNull();
   pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+  vi.advanceTimersByTime(350);
   pointer('pointerup', 1.5, 2.5, { pointerType: 'touch' });
   expect(stage.querySelectorAll('svg')).toHaveLength(1);
   expect(document.querySelectorAll('svg.magnifier')).toHaveLength(1);
@@ -347,9 +363,11 @@ test('aim, hover, blocker and hint colours follow a level backdrop, not the page
 test('the magnifier carries the level backdrop, so its colours match the board', () => {
   mountBoard(svg, board, () => {}, { toCell, background: 'dark' });
   pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+  vi.advanceTimersByTime(350);
   expect(document.querySelector<SVGSVGElement>('svg.magnifier')!.dataset.bg).toBe('dark');
   pointer('pointerup', 1.5, 2.5, { pointerType: 'touch' });
   mountBoard(svg, board, () => {}, { toCell });
   pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+  vi.advanceTimersByTime(350);
   expect(document.querySelector<SVGSVGElement>('svg.magnifier')!.dataset.bg).toBeUndefined();
 });

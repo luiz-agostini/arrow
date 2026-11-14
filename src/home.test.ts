@@ -39,7 +39,20 @@ test('the home screen shows one card per game', () => {
 test.each(['', '#/', '#/x'])('hash "%s" shows the home screen', (hash) => {
   history.replaceState(null, '', hash || location.pathname);
   stopRouter = startRouter(root);
-  expect(cards()).toHaveLength(2);
+  expect(cards().map((c) => [c.getAttribute('href'), c.querySelector('h2')!.textContent])).toEqual([
+    ['#/setas', 'Setas'],
+    ['#/esteira', 'Esteira de Cores'],
+  ]);
+});
+
+test('leaving a screen removes any loupe the arrow board left in the page', () => {
+  stopRouter = startRouter(root);
+  go('#/setas');
+  const stray = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  stray.classList.add('magnifier');
+  document.body.append(stray);
+  go('#/');
+  expect(document.querySelectorAll('svg.magnifier')).toHaveLength(0);
 });
 
 test('#/setas shows the arrow game and #/esteira the new one', () => {

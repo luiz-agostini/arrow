@@ -202,6 +202,8 @@ export function startRouter(root: HTMLElement): () => void {
   const show = () => {
     leave();
     leave = () => {};
+    // The arrow board's touch loupe lives in <body>; don't let it outlive its screen.
+    document.querySelectorAll('body > svg.magnifier').forEach((m) => m.remove());
     const id = location.hash.replace(/^#\/?/, '');
     const screen = document.createElement('div');
     screen.className = `screen screen-${GAMES.some((g) => g.id === id) ? id : 'home'}`;

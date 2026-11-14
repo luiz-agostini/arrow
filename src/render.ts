@@ -284,7 +284,8 @@ function attachInput(
       lastTouch = e;
       loupeTimer = setTimeout(() => {
         loupeTimer = null;
-        if (!press?.touch || !lastTouch) return;
+        // The board may have left the page (the player navigated away mid-press).
+        if (!press?.touch || !lastTouch || !svg.isConnected) return;
         loupeShown = true;
         showMagnifier(lastTouch);
       }, MAGNIFIER_DELAY);

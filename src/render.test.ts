@@ -371,3 +371,11 @@ test('the magnifier carries the level backdrop, so its colours match the board',
   vi.advanceTimersByTime(350);
   expect(document.querySelector<SVGSVGElement>('svg.magnifier')!.dataset.bg).toBeUndefined();
 });
+
+test('a loupe timer that fires after the board left the page shows nothing', () => {
+  mountBoard(svg, board, () => {}, { toCell });
+  pointer('pointerdown', 1.5, 2.5, { pointerType: 'touch' });
+  svg.remove();
+  vi.advanceTimersByTime(400);
+  expect(document.querySelectorAll('svg.magnifier')).toHaveLength(0);
+});

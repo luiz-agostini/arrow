@@ -125,3 +125,13 @@ test('without a level it offers every photo level, starting at the first not cle
   expect(options).toHaveLength(16);
   expect(text('level')).toBe(options[1].textContent);
 });
+
+test('column and slot buttons stay the same elements while the belt runs, so taps are not lost', () => {
+  stop = startEsteira(root, { level: winnable() });
+  click('[data-column="0"]');
+  const column = $('[data-column="1"]');
+  const slot = $('[data-slot="0"]');
+  vi.advanceTimersByTime(5 * TICK_MS + 1);
+  expect($('[data-column="1"]')).toBe(column);
+  expect($('[data-slot="0"]')).toBe(slot);
+});

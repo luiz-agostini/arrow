@@ -5,6 +5,8 @@ import { LEVELS, type Level } from './levels';
 import { mountBoard, type BoardView } from './render';
 import type { Pixels } from './picture';
 import { freeArrows } from './solve';
+import { startEsteira } from './esteira/view';
+import { startHome, type GameId } from './home';
 import './style.css';
 
 const CLEARED_KEY = 'arrow.cleared';
@@ -33,7 +35,10 @@ function saveCleared(cleared: Set<string>): void {
 
 const STATUS: Record<Game['status'], string> = { playing: '', won: 'Concluído!', lost: 'Sem vidas' };
 
-export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => Promise<Pixels> } = {}): void {
+export function startApp(
+  root: HTMLElement,
+  deps: { decodeImage?: (f: File) => Promise<Pixels>; onHome?: () => void } = {},
+): void {
   const decode = deps.decodeImage ?? decodeWithCanvas;
   root.innerHTML = `
     <aside class="levels" aria-label="Níveis">
@@ -42,6 +47,7 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
     </aside>
     <div class="game">
       <header class="hud">
+        <button type="button" class="home-button" data-action="home">Início</button>
         <button type="button" class="levels-toggle" data-action="levels" aria-label="Mostrar níveis">☰ Níveis</button>
         <h1>Jogo da Lindinha</h1>
         <span class="level" data-role="level"></span>
@@ -153,6 +159,7 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
       return;
     }
     const action = (e.target as Element).closest('[data-action]')?.getAttribute('data-action');
+    if (action === 'home') deps.onHome?.();
     if (action === 'levels') {
       if (root.dataset.drawer) delete root.dataset.drawer;
       else root.dataset.drawer = 'open';
@@ -177,5 +184,39 @@ export function startApp(root: HTMLElement, deps: { decodeImage?: (f: File) => P
   load(level, index);
 }
 
+const GAMES: { id: GameId; name: string }[] = [
+  { id: 'setas', name: 'Setas' },
+  { id: 'esteira', name: 'Esteira de Cores' },
+];
+
+/**
+ * Shows the screen for the address hash: `#/setas`, `#/esteira`, or home for anything
+ * else. Each screen gets a fresh container, so its listeners leave with it; Esteira's
+ * belt is stopped on the way out. Returns a function that stops routing.
+ */
+export function startRouter(root: HTMLElement): () => void {
+  let leave = () => {};
+  const goHome = () => {
+    location.hash = '#/';
+  };
+  const show = () => {
+    leave();
+    leave = () => {};
+    const id = location.hash.replace(/^#\/?/, '');
+    const screen = document.createElement('div');
+    screen.className = `screen screen-${GAMES.some((g) => g.id === id) ? id : 'home'}`;
+    root.replaceChildren(screen);
+    if (id === 'setas') startApp(screen, { onHome: goHome });
+    else if (id === 'esteira') leave = startEsteira(screen, { onHome: goHome });
+    else startHome(screen, GAMES);
+  };
+  window.addEventListener('hashchange', show);
+  show();
+  return () => {
+    window.removeEventListener('hashchange', show);
+    leave();
+  };
+}
+
 const mount = document.getElementById('app');
-if (mount) startApp(mount);
+if (mount) startRouter(mount);

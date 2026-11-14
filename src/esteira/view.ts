@@ -115,6 +115,22 @@ export function startEsteira(root: HTMLElement, opts: { level?: EsteiraLevel; on
     svg.append(beltLayer);
   };
 
+  let shownQueues = '';
+  const renderQueues = () => {
+    slotsEl.innerHTML = state.slots
+      .map((s, i) => `<button type="button" class="slot" data-slot="${i}" ${s ? '' : 'disabled'} aria-label="Vaga ${i + 1}">${s ? token(s) : ''}</button>`)
+      .join('');
+    columnsEl.innerHTML = state.columns
+      .map(
+        (c, i) =>
+          `<button type="button" class="column" data-column="${i}" ${c.length ? '' : 'disabled'} aria-label="Coluna ${i + 1}">${c
+            .slice(0, SHOWN_PER_COLUMN)
+            .map(token)
+            .join('')}</button>`,
+      )
+      .join('');
+  };
+
   const update = () => {
     const { width: w, height: h } = state.level;
     state.cells.forEach((c, i) => {
@@ -134,18 +150,13 @@ export function startEsteira(root: HTMLElement, opts: { level?: EsteiraLevel; on
         return g;
       }),
     );
-    slotsEl.innerHTML = state.slots
-      .map((s, i) => `<button type="button" class="slot" data-slot="${i}" ${s ? '' : 'disabled'} aria-label="Vaga ${i + 1}">${s ? token(s) : ''}</button>`)
-      .join('');
-    columnsEl.innerHTML = state.columns
-      .map(
-        (c, i) =>
-          `<button type="button" class="column" data-column="${i}" ${c.length ? '' : 'disabled'} aria-label="Coluna ${i + 1}">${c
-            .slice(0, SHOWN_PER_COLUMN)
-            .map(token)
-            .join('')}</button>`,
-      )
-      .join('');
+    // Only rebuild the buttons when they change: replacing them every belt step would
+    // swallow taps whose press and release straddle a rebuild.
+    const queues = JSON.stringify([state.slots, state.columns.map((c) => c.slice(0, SHOWN_PER_COLUMN))]);
+    if (queues !== shownQueues) {
+      shownQueues = queues;
+      renderQueues();
+    }
     role('belt').textContent = `${state.belt.length}/${BELT_CAPACITY}`;
     role('status').textContent = state.status === 'won' ? 'Concluído!' : state.status === 'lost' ? 'Sem espaço' : '';
     root.dataset.status = state.status;
@@ -174,6 +185,7 @@ export function startEsteira(root: HTMLElement, opts: { level?: EsteiraLevel; on
     picker.value = String(index);
     role('level').textContent = levels[index].name;
     drawBoard();
+    shownQueues = '';
     update();
     timer = setInterval(step, TICK_MS);
   };

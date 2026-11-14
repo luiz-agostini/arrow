@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { LEVELS } from '../levels';
-import { dealShooters, downsample, esteiraLevels, greedyWins, type EsteiraLevel, type Shooter } from './level';
+import { buildEsteiraLevel, dealShooters, downsample, esteiraLevels, greedyWins, type EsteiraLevel, type Shooter } from './level';
 
 describe('downsample', () => {
   test('fits the picture inside 24×32 blocks', () => {
@@ -17,6 +17,12 @@ describe('downsample', () => {
     expect(downsample(mostlyEmpty, 2, 2).cells).toEqual([null, null, null, null]);
     const mixed = ['0112', '1122'];
     expect(downsample(mixed, 2, 1).cells).toEqual([1, 2]);
+  });
+
+  test('exactly half empty keeps the colour, and non-integer scaling tiles the picture', () => {
+    expect(downsample(['0.', '.0'], 1, 1).cells).toEqual([0]);
+    // 5×3 into 2×1: the first block covers columns 0–1, the second columns 2–4.
+    expect(downsample(['01111', '0.111', '00111'], 2, 1)).toEqual({ width: 2, height: 1, cells: [0, 1] });
   });
 
   test('keeps a small picture as it is', () => {
@@ -38,6 +44,16 @@ describe('dealShooters', () => {
     const lengths = columns.map((c) => c.length);
     expect(Math.max(...lengths) - Math.min(...lengths)).toBeLessThanOrEqual(1);
     expect(new Set(shooters.map((s) => s.id)).size).toBe(shooters.length);
+  });
+
+  test('shooters carry 10 or 20 ammo, plus at most one smaller remainder per colour', () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const shooters = dealShooters(cells, seed).flat();
+      expect(shooters.every((s) => s.ammo === 10 || s.ammo === 20 || s.ammo < 10)).toBe(true);
+      for (const color of [0, 1, 2]) expect(shooters.filter((s) => s.color === color && s.ammo < 10).length).toBeLessThanOrEqual(1);
+    }
+    // 15 blocks: a 10 and a 5, never a single 15.
+    expect(dealShooters(Array(15).fill(0), 1).flat().map((s) => s.ammo).sort((a, b) => a - b)).toEqual([5, 10]);
   });
 
   test('is deterministic per seed', () => {
@@ -69,9 +85,7 @@ describe('greedyWins', () => {
 
 describe('esteiraLevels', () => {
   const photos = LEVELS.filter((l) => l.palette);
-  const start = performance.now();
   const levels = esteiraLevels();
-  const elapsed = performance.now() - start;
 
   test('one level per photo level, with the same names, at most 24×32', () => {
     expect(levels.map((l) => l.name)).toEqual(photos.map((l) => l.name));
@@ -83,7 +97,12 @@ describe('esteiraLevels', () => {
     expect(greedyWins(level)).toBe(true);
   });
 
-  test('builds each level in under 200 ms on average', () => {
-    expect(elapsed / levels.length).toBeLessThan(200);
+  test('builds every level in under 200 ms', () => {
+    const times = photos.map((photo) => {
+      const start = performance.now();
+      buildEsteiraLevel(photo);
+      return performance.now() - start;
+    });
+    expect(Math.max(...times)).toBeLessThan(200);
   });
 });

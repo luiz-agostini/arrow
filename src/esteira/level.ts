@@ -1,4 +1,4 @@
-import { LEVELS } from '../levels';
+import { LEVELS, type Level } from '../levels';
 import { regionAt } from '../model';
 import { mulberry32, shuffle } from '../rng';
 import { BELT_CAPACITY, exposedColors, lapLength, launch, newGame, tick } from './sim';
@@ -53,8 +53,9 @@ export function downsample(mask: string[], maxW = 24, maxH = 32): { width: numbe
 }
 
 /**
- * Splits each colour's block count into shooters of 10 or 20 ammo (the last one takes
- * whatever is left, up to 20), shuffles them and deals them round-robin into 5 columns.
+ * Splits each colour's block count into shooters of 10 or 20 ammo (seeded), plus one
+ * smaller shooter for a remainder under 10, shuffles them and deals them round-robin
+ * into 5 columns.
  */
 export function dealShooters(cells: (number | null)[], seed: number): Shooter[][] {
   const rand = mulberry32(seed);
@@ -62,11 +63,13 @@ export function dealShooters(cells: (number | null)[], seed: number): Shooter[][
   for (const c of cells) if (c !== null) counts.set(c, (counts.get(c) ?? 0) + 1);
   const shooters: Shooter[] = [];
   for (const [color, total] of [...counts].sort((a, b) => a[0] - b[0])) {
-    for (let left = total; left > 0; ) {
-      const ammo = left <= MAX_AMMO ? left : rand() < 0.5 ? 10 : 20;
+    let left = total;
+    while (left >= 10) {
+      const ammo = left >= MAX_AMMO && rand() < 0.5 ? MAX_AMMO : 10;
       shooters.push({ id: shooters.length + 1, color, ammo });
       left -= ammo;
     }
+    if (left > 0) shooters.push({ id: shooters.length + 1, color, ammo: left });
   }
   const columns: Shooter[][] = Array.from({ length: COLUMNS }, () => []);
   shuffle(shooters, rand).forEach((s, i) => columns[i % COLUMNS].push(s));
@@ -102,15 +105,18 @@ export function greedyWins(level: EsteiraLevel): boolean {
 
 /**
  * One Esteira level per photo level: the photo's mask shrunk to blocks, with shooters
- * dealt from the level's seed upwards until the greedy player can win (decision B).
+ * dealt from the level's seed upwards until the greedy player can win.
  */
 export function esteiraLevels(): EsteiraLevel[] {
-  return LEVELS.filter((l) => l.palette).map((photo) => {
-    const { width, height, cells } = downsample(photo.mask);
-    for (let seed = photo.seed; seed < photo.seed + MAX_DEALS; seed++) {
-      const level = { name: photo.name, width, height, cells, palette: photo.palette!, columns: dealShooters(cells, seed) };
-      if (greedyWins(level)) return level;
-    }
-    throw new Error(`No winnable deal for ${photo.name}`);
-  });
+  return LEVELS.filter((l) => l.palette).map(buildEsteiraLevel);
+}
+
+/** The Esteira level for one photo level, from its seed upwards until greedy can win. */
+export function buildEsteiraLevel(photo: Level): EsteiraLevel {
+  const { width, height, cells } = downsample(photo.mask);
+  for (let seed = photo.seed; seed < photo.seed + MAX_DEALS; seed++) {
+    const level = { name: photo.name, width, height, cells, palette: photo.palette!, columns: dealShooters(cells, seed) };
+    if (greedyWins(level)) return level;
+  }
+  throw new Error(`No winnable deal for ${photo.name}`);
 }

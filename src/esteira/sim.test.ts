@@ -59,6 +59,14 @@ describe('tick', () => {
     expect(s.slots).toEqual([null, null, null, null, null]);
   });
 
+  test('a shooter never shoots through a block of another colour', () => {
+    // A 3×3 frame of colour 0 hides a colour-1 centre on every line.
+    let s = launch(newGame(level([0, 0, 0, 0, 1, 0, 0, 0, 0], [[shooter(1, 1, 1)]], 3, 3)), { column: 0 });
+    s = lap(s);
+    expect(s.cells[4]).toBe(1);
+    expect(s.slots[0]).toEqual(shooter(1, 1, 1));
+  });
+
   test('a shooter with ammo left after a lap parks in the first free slot', () => {
     let s = launch(newGame(level([0, 1, 0, 0], [[shooter(1, 0, 5)]])), { column: 0 });
     s = lap(s);
